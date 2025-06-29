@@ -1,18 +1,4 @@
-
-function getTrafficLightStatus(fileId) {
-            if (completedFiles.has(fileId)) return 'green';
-            if (listenedFiles.has(fileId)) return 'yellow';
-            return 'red';
-        }
-
-        function getTrafficLightSymbol(status) {
-            switch(status) {
-                case 'green': return '✓';
-                case 'yellow': return '◐';
-                case 'red': return '○';
-                default: return '○';
-            }
-        }<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -23,30 +9,6 @@ function getTrafficLightStatus(fileId) {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-        }
-
-        function updateTrafficLight(audioCard, fileId) {
-            const trafficLight = audioCard.querySelector('.traffic-light');
-            const status = getTrafficLightStatus(fileId);
-            const symbol = getTrafficLightSymbol(status);
-            
-            trafficLight.className = `traffic-light ${status}`;
-            trafficLight.textContent = symbol;
-        }
-
-        function togglePersistence() {
-            persistenceEnabled = document.getElementById('persistenceCheckbox').checked;
-            
-            if (persistenceEnabled) {
-                saveProgress();
-            } else {
-                // Clear saved data when disabled
-                try {
-                    localStorage.removeItem('deepdive-audio-progress');
-                } catch (e) {
-                    console.log('Could not clear saved data');
-                }
-            }
         }
 
         body {
@@ -173,105 +135,15 @@ function getTrafficLightStatus(fileId) {
             border: 1px solid #f0f0f0;
         }
 
-        .audio-card.playing {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            border: 2px solid #667eea;
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        .audio-card:hover {
             transform: translateY(-5px);
-        }
-
-        .audio-card.playing .card-header {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-        }
-
-        .audio-card.playing .card-title {
-            color: white;
-            font-weight: 700;
-        }
-
-        .audio-card.playing .card-meta {
-            color: rgba(255, 255, 255, 0.9);
-        }
-
-        .audio-card.playing .file-size {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-
-        .audio-card.paused {
-            background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
-            border: 2px solid #fdcb6e;
-            box-shadow: 0 8px 25px rgba(253, 203, 110, 0.2);
-        }
-
-        .audio-card.paused .card-header {
-            background: rgba(0, 0, 0, 0.05);
-        }
-
-        .audio-card.paused .card-title {
-            color: #2d3436;
-            font-weight: 600;
-        }
-
-        .traffic-light {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            font-weight: bold;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            border: 2px solid white;
-        }
-
-        .traffic-light.red {
-            background: #e74c3c;
-            color: white;
-        }
-
-        .traffic-light.yellow {
-            background: #f39c12;
-            color: white;
-        }
-
-        .traffic-light.green {
-            background: #27ae60;
-            color: white;
-        }
-
-        .persistence-controls {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 1rem;
-            margin-top: 1rem;
-            border-radius: 10px;
-            text-align: center;
-        }
-
-        .persistence-toggle {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            font-size: 0.9rem;
-        }
-
-        .persistence-toggle input[type="checkbox"] {
-            transform: scale(1.2);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
         }
 
         .card-header {
             padding: 1.5rem;
             background: linear-gradient(135deg, #f8f9fa, #e9ecef);
             border-bottom: 1px solid #e0e0e0;
-            position: relative;
         }
 
         .card-title {
@@ -307,23 +179,6 @@ function getTrafficLightStatus(fileId) {
         .audio-player {
             width: 100%;
             margin-bottom: 1rem;
-            height: 60px; /* Make the entire audio control taller */
-        }
-
-        /* Make play/pause buttons much bigger */
-        .audio-player::-webkit-media-controls-play-button,
-        .audio-player::-webkit-media-controls-pause-button {
-            width: 60px !important;
-            height: 60px !important;
-            transform: scale(2);
-        }
-
-        /* Firefox styling */
-        .audio-player::-moz-media-controls-play-button,
-        .audio-player::-moz-media-controls-pause-button {
-            width: 60px !important;
-            height: 60px !important;
-            transform: scale(2);
         }
 
         .audio-controls {
@@ -404,7 +259,7 @@ function getTrafficLightStatus(fileId) {
     <div class="container">
         <div class="header">
             <h1>🎧 Deep Dive Audio Library</h1>
-            <p>Deep Dive audio explorations and insights from document analysis</p>
+            <p>AI-generated audio overviews and insights from document analysis</p>
             <div class="stats">
                 <div class="stat">
                     <span class="stat-number" id="totalFiles">-</span>
@@ -419,16 +274,6 @@ function getTrafficLightStatus(fileId) {
                     <span class="stat-label">Last Updated</span>
                 </div>
             </div>
-            
-            <div class="persistence-controls">
-                <div class="persistence-toggle">
-                    <input type="checkbox" id="persistenceCheckbox" onchange="togglePersistence()">
-                    <label for="persistenceCheckbox">Remember my progress between visits</label>
-                </div>
-                <div style="font-size: 0.8rem; opacity: 0.8; margin-top: 0.5rem;">
-                    🔴 Not started • 🟡 Partially listened • 🟢 Fully listened
-                </div>
-            </div>
         </div>
 
         <div class="content">
@@ -438,6 +283,10 @@ function getTrafficLightStatus(fileId) {
             </div>
 
             <div id="mainContent" style="display: none;">
+                <div class="search-container">
+                    <input type="text" id="searchBox" class="search-box" placeholder="🔍 Search audio files by name or content...">
+                </div>
+
                 <div id="audioGrid" class="audio-grid"></div>
                 
                 <div id="noResults" class="no-results" style="display: none;">
@@ -456,13 +305,34 @@ function getTrafficLightStatus(fileId) {
         const GITHUB_API_URL = 'https://api.github.com/repos/markdja/DeepDive/contents/recordings';
         const RAW_BASE_URL = 'https://raw.githubusercontent.com/markdja/DeepDive/main/recordings/';
         
+        // Add your actual MP3 filenames here - this ensures the page works even if the API is rate-limited
+        const KNOWN_FILES = [
+            'AI and the future of human potential.mp3',
+            'AI in healthcare transformation.mp3', 
+            'Blockchain beyond cryptocurrency.mp3',
+            'Climate change solutions.mp3',
+            'Consciousness and AI.mp3',
+            'Digital transformation strategies.mp3',
+            'Future of work automation.mp3',
+            'Quantum computing primer.mp3',
+            'Renewable energy innovations.mp3',
+            'Space exploration next steps.mp3',
+            'Sustainable business models.mp3',
+            'The metaverse explained.mp3',
+            'Virtual reality applications.mp3'
+        ];
+        
         let allAudioFiles = [];
         let filteredFiles = [];
 
         async function loadAudioFiles() {
             try {
-                const response = await fetch(GITHUB_API_URL);
-                if (!response.ok) throw new Error('Failed to fetch files');
+                // Try GitHub API first
+                let response = await fetch(GITHUB_API_URL);
+                
+                if (!response.ok) {
+                    throw new Error(`GitHub API failed: ${response.status}`);
+                }
                 
                 const files = await response.json();
                 const mp3Files = files.filter(file => 
@@ -475,15 +345,11 @@ function getTrafficLightStatus(fileId) {
                     size: file.size,
                     downloadUrl: file.download_url,
                     rawUrl: RAW_BASE_URL + encodeURIComponent(file.name),
-                    lastModified: new Date().toLocaleDateString() // GitHub API doesn't provide this easily
+                    lastModified: new Date().toLocaleDateString()
                 }));
 
                 filteredFiles = [...allAudioFiles];
                 updateStats();
-                
-                // Load saved progress if persistence is enabled
-                loadSavedProgress();
-                
                 renderAudioGrid();
                 
                 document.getElementById('loadingState').style.display = 'none';
@@ -491,9 +357,45 @@ function getTrafficLightStatus(fileId) {
                 
             } catch (error) {
                 console.error('Error loading files:', error);
-                document.getElementById('loadingState').style.display = 'none';
-                document.getElementById('errorState').style.display = 'block';
+                
+                // Fallback: Load a predefined list if API fails
+                await loadFallbackFiles();
             }
+        }
+
+        async function loadFallbackFiles() {
+            // Fallback file list - you can manually update this when you add files
+            const fallbackFiles = [
+                'AI and the future of human potential.mp3',
+                'AI in healthcare transformation.mp3',
+                'Blockchain beyond cryptocurrency.mp3',
+                'Climate change solutions.mp3',
+                'Consciousness and AI.mp3',
+                'Digital transformation strategies.mp3',
+                'Future of work automation.mp3',
+                'Quantum computing primer.mp3',
+                'Renewable energy innovations.mp3',
+                'Space exploration next steps.mp3',
+                'Sustainable business models.mp3',
+                'The metaverse explained.mp3',
+                'Virtual reality applications.mp3'
+            ];
+
+            allAudioFiles = fallbackFiles.map(filename => ({
+                name: filename,
+                displayName: formatFileName(filename),
+                size: 2300000, // Approximate size in bytes
+                downloadUrl: RAW_BASE_URL + encodeURIComponent(filename),
+                rawUrl: RAW_BASE_URL + encodeURIComponent(filename),
+                lastModified: new Date().toLocaleDateString()
+            }));
+
+            filteredFiles = [...allAudioFiles];
+            updateStats();
+            renderAudioGrid();
+            
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
         }
 
         function formatFileName(filename) {
@@ -519,47 +421,6 @@ function getTrafficLightStatus(fileId) {
             document.getElementById('lastUpdated').textContent = 'Today';
         }
 
-        // Audio playback management
-        let audioStates = {}; // Store playback positions
-        let listenedFiles = new Set(); // Track which files have been played
-        let completedFiles = new Set(); // Track which files have been fully listened to
-        let currentlyPlaying = null;
-        let persistenceEnabled = false; // Whether to save to localStorage
-
-        // Load saved data from localStorage on page load
-        function loadSavedProgress() {
-            if (!persistenceEnabled) return;
-            
-            try {
-                const saved = localStorage.getItem('deepdive-audio-progress');
-                if (saved) {
-                    const data = JSON.parse(saved);
-                    audioStates = data.audioStates || {};
-                    listenedFiles = new Set(data.listenedFiles || []);
-                    completedFiles = new Set(data.completedFiles || []);
-                }
-            } catch (e) {
-                console.log('Could not load saved progress');
-            }
-        }
-
-        // Save progress to localStorage
-        function saveProgress() {
-            if (!persistenceEnabled) return;
-            
-            try {
-                const data = {
-                    audioStates: audioStates,
-                    listenedFiles: Array.from(listenedFiles),
-                    completedFiles: Array.from(completedFiles),
-                    lastUpdated: Date.now()
-                };
-                localStorage.setItem('deepdive-audio-progress', JSON.stringify(data));
-            } catch (e) {
-                console.log('Could not save progress');
-            }
-        }
-
         function renderAudioGrid() {
             const grid = document.getElementById('audioGrid');
             const noResults = document.getElementById('noResults');
@@ -572,17 +433,9 @@ function getTrafficLightStatus(fileId) {
             
             noResults.style.display = 'none';
             
-            // Sort files by name (this respects any numbering/naming scheme you use)
-            const sortedFiles = [...filteredFiles].sort((a, b) => a.name.localeCompare(b.name));
-            
-            grid.innerHTML = sortedFiles.map((file, index) => {
-                const status = getTrafficLightStatus(file.name);
-                const symbol = getTrafficLightSymbol(status);
-                
-                return `
+            grid.innerHTML = filteredFiles.map(file => `
                 <div class="audio-card">
                     <div class="card-header">
-                        <div class="traffic-light ${status}">${symbol}</div>
                         <div class="card-title">${file.displayName}</div>
                         <div class="card-meta">
                             <span>MP3 Audio</span>
@@ -590,14 +443,11 @@ function getTrafficLightStatus(fileId) {
                         </div>
                     </div>
                     <div class="card-body">
-                        <audio class="audio-player" controls preload="metadata" data-file-id="${file.name}">
+                        <audio class="audio-player" controls preload="none">
                             <source src="${file.rawUrl}" type="audio/mpeg">
                             Your browser does not support the audio element.
                         </audio>
                         <div class="audio-controls">
-                            <button class="btn btn-primary restart-btn" data-file-id="${file.name}">
-                                🔄 Restart
-                            </button>
                             <a href="${file.downloadUrl}" class="btn btn-primary" download>
                                 📥 Download
                             </a>
@@ -607,157 +457,29 @@ function getTrafficLightStatus(fileId) {
                         </div>
                     </div>
                 </div>
-            `;
-            }).join('');
-
-            // Add event listeners to all audio players
-            setupAudioControls();
-        }
-
-        function setupAudioControls() {
-            const audioPlayers = document.querySelectorAll('.audio-player');
-            const restartButtons = document.querySelectorAll('.restart-btn');
-
-            audioPlayers.forEach(audio => {
-                const fileId = audio.dataset.fileId;
-                const audioCard = audio.closest('.audio-card');
-
-                // Restore saved position if available
-                if (audioStates[fileId]) {
-                    audio.currentTime = audioStates[fileId].currentTime;
-                    // If this was the previously playing file, mark it as paused
-                    if (currentlyPlaying === fileId) {
-                        audioCard.classList.add('paused');
-                    }
-                }
-
-                // When user starts playing
-                audio.addEventListener('play', () => {
-                    // Mark this file as listened to
-                    listenedFiles.add(fileId);
-                    
-                    // Remove highlighting from all other cards
-                    document.querySelectorAll('.audio-card').forEach(card => {
-                        card.classList.remove('playing', 'paused');
-                    });
-
-                    // Pause all other audio players
-                    audioPlayers.forEach(otherAudio => {
-                        if (otherAudio !== audio && !otherAudio.paused) {
-                            // Save the position before pausing
-                            const otherFileId = otherAudio.dataset.fileId;
-                            audioStates[otherFileId] = {
-                                currentTime: otherAudio.currentTime,
-                                duration: otherAudio.duration
-                            };
-                            otherAudio.pause();
-                        }
-                    });
-
-                    // Highlight current playing card
-                    audioCard.classList.add('playing');
-                    currentlyPlaying = fileId;
-                    
-                    // Update the traffic light
-                    updateTrafficLight(audioCard, fileId);
-                    saveProgress();
-                });
-
-                // When paused
-                audio.addEventListener('pause', () => {
-                    audioStates[fileId] = {
-                        currentTime: audio.currentTime,
-                        duration: audio.duration
-                    };
-                    
-                    // Change to paused styling
-                    audioCard.classList.remove('playing');
-                    audioCard.classList.add('paused');
-                });
-
-                audio.addEventListener('timeupdate', () => {
-                    audioStates[fileId] = {
-                        currentTime: audio.currentTime,
-                        duration: audio.duration
-                    };
-                    
-                    // Check if audio is nearly finished (within last 5 seconds or 95% complete)
-                    const remaining = audio.duration - audio.currentTime;
-                    const percentComplete = (audio.currentTime / audio.duration) * 100;
-                    
-                    if (remaining <= 5 || percentComplete >= 95) {
-                        if (!completedFiles.has(fileId)) {
-                            completedFiles.add(fileId);
-                            updateTrafficLight(audioCard, fileId);
-                            saveProgress();
-                        }
-                    }
-                });
-
-                // Clear saved position when audio ends
-                audio.addEventListener('ended', () => {
-                    completedFiles.add(fileId);
-                    delete audioStates[fileId];
-                    currentlyPlaying = null;
-                    audioCard.classList.remove('playing', 'paused');
-                    updateTrafficLight(audioCard, fileId);
-                    saveProgress();
-                });
-            });
-
-            // Restart button functionality
-            restartButtons.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const fileId = btn.dataset.fileId;
-                    const audio = document.querySelector(`[data-file-id="${fileId}"]`);
-                    const audioCard = audio.closest('.audio-card');
-                    
-                    // Clear saved state and restart
-                    delete audioStates[fileId];
-                    audio.currentTime = 0;
-                    
-                    // Remove highlighting from all cards
-                    document.querySelectorAll('.audio-card').forEach(card => {
-                        card.classList.remove('playing', 'paused');
-                    });
-                    
-                    // Pause any currently playing audio
-                    document.querySelectorAll('.audio-player').forEach(otherAudio => {
-                        if (otherAudio !== audio && !otherAudio.paused) {
-                            otherAudio.pause();
-                        }
-                    });
-                    
-                    // Start playing and highlight
-                    audio.play();
-                    audioCard.classList.add('playing');
-                    currentlyPlaying = fileId;
-                });
-            });
+            `).join('');
         }
 
         function handleSearch() {
-            // Search functionality removed until transcription is available
-            filteredFiles = [...allAudioFiles];
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+            
+            if (!searchTerm) {
+                filteredFiles = [...allAudioFiles];
+            } else {
+                filteredFiles = allAudioFiles.filter(file => 
+                    file.displayName.toLowerCase().includes(searchTerm) ||
+                    file.name.toLowerCase().includes(searchTerm)
+                );
+            }
+            
             renderAudioGrid();
         }
 
         // Event listeners
-        // Search removed until transcription available
+        document.getElementById('searchBox').addEventListener('input', handleSearch);
 
         // Initialize
         loadAudioFiles();
-        
-        // Check if user previously enabled persistence
-        try {
-            const saved = localStorage.getItem('deepdive-audio-progress');
-            if (saved) {
-                document.getElementById('persistenceCheckbox').checked = true;
-                persistenceEnabled = true;
-            }
-        } catch (e) {
-            // localStorage not available
-        }
     </script>
 </body>
 </html>
