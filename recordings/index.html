@@ -11,6 +11,18 @@
             box-sizing: border-box;
         }
 
+        function updateListenedIndicator(audioCard, fileId) {
+            const header = audioCard.querySelector('.card-header');
+            const existingIndicator = header.querySelector('.listened-indicator');
+            
+            if (listenedFiles.has(fileId) && !existingIndicator) {
+                const indicator = document.createElement('div');
+                indicator.className = 'listened-indicator';
+                indicator.innerHTML = '✓';
+                header.appendChild(indicator);
+            }
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             line-height: 1.6;
@@ -178,10 +190,28 @@
             font-weight: 600;
         }
 
+        .listened-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #27ae60;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
         .card-header {
             padding: 1.5rem;
             background: linear-gradient(135deg, #f8f9fa, #e9ecef);
             border-bottom: 1px solid #e0e0e0;
+            position: relative;
         }
 
         .card-title {
@@ -314,7 +344,7 @@
     <div class="container">
         <div class="header">
             <h1>🎧 Deep Dive Audio Library</h1>
-            <p>AI-generated audio overviews and insights from document analysis</p>
+            <p>Deep Dive audio explorations and insights from document analysis</p>
             <div class="stats">
                 <div class="stat">
                     <span class="stat-number" id="totalFiles">-</span>
@@ -338,10 +368,6 @@
             </div>
 
             <div id="mainContent" style="display: none;">
-                <div class="search-container">
-                    <input type="text" id="searchBox" class="search-box" placeholder="🔍 Search audio files by name or content...">
-                </div>
-
                 <div id="audioGrid" class="audio-grid"></div>
                 
                 <div id="noResults" class="no-results" style="display: none;">
@@ -421,6 +447,7 @@
 
         // Audio playback management
         let audioStates = {}; // Store playback positions
+        let listenedFiles = new Set(); // Track which files have been played
         let currentlyPlaying = null;
 
         function renderAudioGrid() {
@@ -441,6 +468,7 @@
             grid.innerHTML = sortedFiles.map((file, index) => `
                 <div class="audio-card">
                     <div class="card-header">
+                        ${listenedFiles.has(file.name) ? '<div class="listened-indicator">✓</div>' : ''}
                         <div class="card-title">${file.displayName}</div>
                         <div class="card-meta">
                             <span>MP3 Audio</span>
@@ -490,6 +518,9 @@
 
                 // When user starts playing
                 audio.addEventListener('play', () => {
+                    // Mark this file as listened to
+                    listenedFiles.add(fileId);
+                    
                     // Remove highlighting from all other cards
                     document.querySelectorAll('.audio-card').forEach(card => {
                         card.classList.remove('playing', 'paused');
@@ -511,6 +542,9 @@
                     // Highlight current playing card
                     audioCard.classList.add('playing');
                     currentlyPlaying = fileId;
+                    
+                    // Update the listened indicator
+                    updateListenedIndicator(audioCard, fileId);
                 });
 
                 // When paused
@@ -572,22 +606,13 @@
         }
 
         function handleSearch() {
-            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
-            
-            if (!searchTerm) {
-                filteredFiles = [...allAudioFiles];
-            } else {
-                filteredFiles = allAudioFiles.filter(file => 
-                    file.displayName.toLowerCase().includes(searchTerm) ||
-                    file.name.toLowerCase().includes(searchTerm)
-                );
-            }
-            
+            // Search functionality removed until transcription is available
+            filteredFiles = [...allAudioFiles];
             renderAudioGrid();
         }
 
         // Event listeners
-        document.getElementById('searchBox').addEventListener('input', handleSearch);
+        // Search removed until transcription available
 
         // Initialize
         loadAudioFiles();
