@@ -1,1 +1,428 @@
-There will be a list of mp3's here
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Dive Audio Library</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 4rem;
+            font-size: 1.2rem;
+            color: #666;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .content {
+            padding: 2rem;
+        }
+
+        .search-container {
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            font-size: 1.1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 50px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .search-box:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .audio-grid {
+            display: grid;
+            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        }
+
+        .audio-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            border: 1px solid #f0f0f0;
+        }
+
+        .audio-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            padding: 1.5rem;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+            word-break: break-word;
+        }
+
+        .card-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            color: #666;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .file-size {
+            background: #667eea;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        .audio-player {
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+
+        .audio-controls {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a6fd8;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-1px);
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .audio-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats {
+                gap: 1rem;
+            }
+            
+            body {
+                padding: 1rem 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎧 Deep Dive Audio Library</h1>
+            <p>AI-generated audio overviews and insights from document analysis</p>
+            <div class="stats">
+                <div class="stat">
+                    <span class="stat-number" id="totalFiles">-</span>
+                    <span class="stat-label">Audio Files</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-number" id="totalSize">-</span>
+                    <span class="stat-label">Total Size</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-number" id="lastUpdated">-</span>
+                    <span class="stat-label">Last Updated</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="content">
+            <div id="loadingState" class="loading">
+                <div class="spinner"></div>
+                <div>Loading audio library...</div>
+            </div>
+
+            <div id="mainContent" style="display: none;">
+                <div class="search-container">
+                    <input type="text" id="searchBox" class="search-box" placeholder="🔍 Search audio files by name or content...">
+                </div>
+
+                <div id="audioGrid" class="audio-grid"></div>
+                
+                <div id="noResults" class="no-results" style="display: none;">
+                    <h3>No files found</h3>
+                    <p>Try adjusting your search terms</p>
+                </div>
+            </div>
+
+            <div id="errorState" class="error" style="display: none;">
+                Failed to load audio files. Please try refreshing the page.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const GITHUB_API_URL = 'https://api.github.com/repos/markdja/DeepDive/contents/recordings';
+        const RAW_BASE_URL = 'https://raw.githubusercontent.com/markdja/DeepDive/main/recordings/';
+        
+        let allAudioFiles = [];
+        let filteredFiles = [];
+
+        async function loadAudioFiles() {
+            try {
+                const response = await fetch(GITHUB_API_URL);
+                if (!response.ok) throw new Error('Failed to fetch files');
+                
+                const files = await response.json();
+                const mp3Files = files.filter(file => 
+                    file.name.toLowerCase().endsWith('.mp3') && file.type === 'file'
+                );
+
+                allAudioFiles = mp3Files.map(file => ({
+                    name: file.name,
+                    displayName: formatFileName(file.name),
+                    size: file.size,
+                    downloadUrl: file.download_url,
+                    rawUrl: RAW_BASE_URL + encodeURIComponent(file.name),
+                    lastModified: new Date().toLocaleDateString() // GitHub API doesn't provide this easily
+                }));
+
+                filteredFiles = [...allAudioFiles];
+                updateStats();
+                renderAudioGrid();
+                
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error loading files:', error);
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('errorState').style.display = 'block';
+            }
+        }
+
+        function formatFileName(filename) {
+            return filename
+                .replace(/\.mp3$/i, '')
+                .replace(/[-_]/g, ' ')
+                .replace(/\b\w/g, l => l.toUpperCase());
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function updateStats() {
+            const totalSize = allAudioFiles.reduce((sum, file) => sum + file.size, 0);
+            
+            document.getElementById('totalFiles').textContent = allAudioFiles.length;
+            document.getElementById('totalSize').textContent = formatFileSize(totalSize);
+            document.getElementById('lastUpdated').textContent = 'Today';
+        }
+
+        function renderAudioGrid() {
+            const grid = document.getElementById('audioGrid');
+            const noResults = document.getElementById('noResults');
+            
+            if (filteredFiles.length === 0) {
+                grid.innerHTML = '';
+                noResults.style.display = 'block';
+                return;
+            }
+            
+            noResults.style.display = 'none';
+            
+            grid.innerHTML = filteredFiles.map(file => `
+                <div class="audio-card">
+                    <div class="card-header">
+                        <div class="card-title">${file.displayName}</div>
+                        <div class="card-meta">
+                            <span>MP3 Audio</span>
+                            <span class="file-size">${formatFileSize(file.size)}</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <audio class="audio-player" controls preload="none">
+                            <source src="${file.rawUrl}" type="audio/mpeg">
+                            Your browser does not support the audio element.
+                        </audio>
+                        <div class="audio-controls">
+                            <a href="${file.downloadUrl}" class="btn btn-primary" download>
+                                📥 Download
+                            </a>
+                            <a href="${file.rawUrl}" class="btn btn-secondary" target="_blank">
+                                🔗 Direct Link
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function handleSearch() {
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+            
+            if (!searchTerm) {
+                filteredFiles = [...allAudioFiles];
+            } else {
+                filteredFiles = allAudioFiles.filter(file => 
+                    file.displayName.toLowerCase().includes(searchTerm) ||
+                    file.name.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            renderAudioGrid();
+        }
+
+        // Event listeners
+        document.getElementById('searchBox').addEventListener('input', handleSearch);
+
+        // Initialize
+        loadAudioFiles();
+    </script>
+</body>
+</html>
