@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,6 +10,18 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+        }
+
+        function updateListenedIndicator(audioCard, fileId) {
+            const header = audioCard.querySelector('.card-header');
+            const existingIndicator = header.querySelector('.listened-indicator');
+            
+            if (listenedFiles.has(fileId) && !existingIndicator) {
+                const indicator = document.createElement('div');
+                indicator.className = 'listened-indicator';
+                indicator.innerHTML = '✓';
+                header.appendChild(indicator);
+            }
         }
 
         body {
@@ -135,15 +148,71 @@
             border: 1px solid #f0f0f0;
         }
 
-        .audio-card:hover {
+        .audio-card.playing {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: 2px solid #667eea;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
             transform: translateY(-5px);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+        }
+
+        .audio-card.playing .card-header {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .audio-card.playing .card-title {
+            color: white;
+            font-weight: 700;
+        }
+
+        .audio-card.playing .card-meta {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .audio-card.playing .file-size {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .audio-card.paused {
+            background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
+            border: 2px solid #fdcb6e;
+            box-shadow: 0 8px 25px rgba(253, 203, 110, 0.2);
+        }
+
+        .audio-card.paused .card-header {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .audio-card.paused .card-title {
+            color: #2d3436;
+            font-weight: 600;
+        }
+
+        .listened-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #27ae60;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
 
         .card-header {
             padding: 1.5rem;
             background: linear-gradient(135deg, #f8f9fa, #e9ecef);
             border-bottom: 1px solid #e0e0e0;
+            position: relative;
         }
 
         .card-title {
@@ -179,6 +248,23 @@
         .audio-player {
             width: 100%;
             margin-bottom: 1rem;
+            height: 60px; /* Make the entire audio control taller */
+        }
+
+        /* Make play/pause buttons much bigger */
+        .audio-player::-webkit-media-controls-play-button,
+        .audio-player::-webkit-media-controls-pause-button {
+            width: 60px !important;
+            height: 60px !important;
+            transform: scale(2);
+        }
+
+        /* Firefox styling */
+        .audio-player::-moz-media-controls-play-button,
+        .audio-player::-moz-media-controls-pause-button {
+            width: 60px !important;
+            height: 60px !important;
+            transform: scale(2);
         }
 
         .audio-controls {
@@ -259,7 +345,7 @@
     <div class="container">
         <div class="header">
             <h1>🎧 Deep Dive Audio Library</h1>
-            <p>AI-generated audio overviews and insights from document analysis</p>
+            <p>Deep Dive audio explorations and insights from document analysis</p>
             <div class="stats">
                 <div class="stat">
                     <span class="stat-number" id="totalFiles">-</span>
@@ -283,10 +369,6 @@
             </div>
 
             <div id="mainContent" style="display: none;">
-                <div class="search-container">
-                    <input type="text" id="searchBox" class="search-box" placeholder="🔍 Search audio files by name or content...">
-                </div>
-
                 <div id="audioGrid" class="audio-grid"></div>
                 
                 <div id="noResults" class="no-results" style="display: none;">
@@ -305,76 +387,40 @@
         const GITHUB_API_URL = 'https://api.github.com/repos/markdja/DeepDive/contents/recordings';
         const RAW_BASE_URL = 'https://raw.githubusercontent.com/markdja/DeepDive/main/recordings/';
         
-        // Add your actual MP3 filenames here - this ensures the page works even if the API is rate-limited
-        const KNOWN_FILES = [
-            'AI and the future of human potential.mp3',
-            'AI in healthcare transformation.mp3', 
-            'Blockchain beyond cryptocurrency.mp3',
-            'Climate change solutions.mp3',
-            'Consciousness and AI.mp3',
-            'Digital transformation strategies.mp3',
-            'Future of work automation.mp3',
-            'Quantum computing primer.mp3',
-            'Renewable energy innovations.mp3',
-            'Space exploration next steps.mp3',
-            'Sustainable business models.mp3',
-            'The metaverse explained.mp3',
-            'Virtual reality applications.mp3'
-        ];
-        
         let allAudioFiles = [];
         let filteredFiles = [];
 
         async function loadAudioFiles() {
             try {
-                // First try to get files from GitHub API
-                const response = await fetch(GITHUB_API_URL, {
-                    headers: {
-                        'Accept': 'application/vnd.github.v3+json'
-                    }
-                });
+                const response = await fetch(GITHUB_API_URL);
+                if (!response.ok) throw new Error('Failed to fetch files');
                 
-                if (response.ok) {
-                    const files = await response.json();
-                    const mp3Files = files.filter(file => 
-                        file.name.toLowerCase().endsWith('.mp3') && file.type === 'file'
-                    );
+                const files = await response.json();
+                const mp3Files = files.filter(file => 
+                    file.name.toLowerCase().endsWith('.mp3') && file.type === 'file'
+                );
 
-                    if (mp3Files.length > 0) {
-                        allAudioFiles = mp3Files.map(file => ({
-                            name: file.name,
-                            displayName: formatFileName(file.name),
-                            size: file.size,
-                            downloadUrl: file.download_url,
-                            rawUrl: RAW_BASE_URL + encodeURIComponent(file.name),
-                            lastModified: new Date().toLocaleDateString()
-                        }));
-                    } else {
-                        throw new Error('No MP3 files found via API');
-                    }
-                } else {
-                    throw new Error(`API responded with ${response.status}`);
-                }
-            } catch (error) {
-                console.log('GitHub API unavailable, using known file list:', error.message);
-                
-                // Fallback to known files list
-                allAudioFiles = KNOWN_FILES.map(filename => ({
-                    name: filename,
-                    displayName: formatFileName(filename),
-                    size: 2300000, // Approximate size
-                    downloadUrl: RAW_BASE_URL + encodeURIComponent(filename),
-                    rawUrl: RAW_BASE_URL + encodeURIComponent(filename),
-                    lastModified: new Date().toLocaleDateString()
+                allAudioFiles = mp3Files.map(file => ({
+                    name: file.name,
+                    displayName: formatFileName(file.name),
+                    size: file.size,
+                    downloadUrl: file.download_url,
+                    rawUrl: RAW_BASE_URL + encodeURIComponent(file.name),
+                    lastModified: new Date().toLocaleDateString() // GitHub API doesn't provide this easily
                 }));
-            }
 
-            filteredFiles = [...allAudioFiles];
-            updateStats();
-            renderAudioGrid();
-            
-            document.getElementById('loadingState').style.display = 'none';
-            document.getElementById('mainContent').style.display = 'block';
+                filteredFiles = [...allAudioFiles];
+                updateStats();
+                renderAudioGrid();
+                
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error loading files:', error);
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('errorState').style.display = 'block';
+            }
         }
 
         function formatFileName(filename) {
@@ -400,6 +446,11 @@
             document.getElementById('lastUpdated').textContent = 'Today';
         }
 
+        // Audio playback management
+        let audioStates = {}; // Store playback positions
+        let listenedFiles = new Set(); // Track which files have been played
+        let currentlyPlaying = null;
+
         function renderAudioGrid() {
             const grid = document.getElementById('audioGrid');
             const noResults = document.getElementById('noResults');
@@ -412,9 +463,13 @@
             
             noResults.style.display = 'none';
             
-            grid.innerHTML = filteredFiles.map(file => `
+            // Sort files by name (this respects any numbering/naming scheme you use)
+            const sortedFiles = [...filteredFiles].sort((a, b) => a.name.localeCompare(b.name));
+            
+            grid.innerHTML = sortedFiles.map((file, index) => `
                 <div class="audio-card">
                     <div class="card-header">
+                        ${listenedFiles.has(file.name) ? '<div class="listened-indicator">✓</div>' : ''}
                         <div class="card-title">${file.displayName}</div>
                         <div class="card-meta">
                             <span>MP3 Audio</span>
@@ -422,11 +477,14 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <audio class="audio-player" controls preload="none">
+                        <audio class="audio-player" controls preload="metadata" data-file-id="${file.name}">
                             <source src="${file.rawUrl}" type="audio/mpeg">
                             Your browser does not support the audio element.
                         </audio>
                         <div class="audio-controls">
+                            <button class="btn btn-primary restart-btn" data-file-id="${file.name}">
+                                🔄 Restart
+                            </button>
                             <a href="${file.downloadUrl}" class="btn btn-primary" download>
                                 📥 Download
                             </a>
@@ -437,25 +495,125 @@
                     </div>
                 </div>
             `).join('');
+
+            // Add event listeners to all audio players
+            setupAudioControls();
+        }
+
+        function setupAudioControls() {
+            const audioPlayers = document.querySelectorAll('.audio-player');
+            const restartButtons = document.querySelectorAll('.restart-btn');
+
+            audioPlayers.forEach(audio => {
+                const fileId = audio.dataset.fileId;
+                const audioCard = audio.closest('.audio-card');
+
+                // Restore saved position if available
+                if (audioStates[fileId]) {
+                    audio.currentTime = audioStates[fileId].currentTime;
+                    // If this was the previously playing file, mark it as paused
+                    if (currentlyPlaying === fileId) {
+                        audioCard.classList.add('paused');
+                    }
+                }
+
+                // When user starts playing
+                audio.addEventListener('play', () => {
+                    // Mark this file as listened to
+                    listenedFiles.add(fileId);
+                    
+                    // Remove highlighting from all other cards
+                    document.querySelectorAll('.audio-card').forEach(card => {
+                        card.classList.remove('playing', 'paused');
+                    });
+
+                    // Pause all other audio players
+                    audioPlayers.forEach(otherAudio => {
+                        if (otherAudio !== audio && !otherAudio.paused) {
+                            // Save the position before pausing
+                            const otherFileId = otherAudio.dataset.fileId;
+                            audioStates[otherFileId] = {
+                                currentTime: otherAudio.currentTime,
+                                duration: otherAudio.duration
+                            };
+                            otherAudio.pause();
+                        }
+                    });
+
+                    // Highlight current playing card
+                    audioCard.classList.add('playing');
+                    currentlyPlaying = fileId;
+                    
+                    // Update the listened indicator
+                    updateListenedIndicator(audioCard, fileId);
+                });
+
+                // When paused
+                audio.addEventListener('pause', () => {
+                    audioStates[fileId] = {
+                        currentTime: audio.currentTime,
+                        duration: audio.duration
+                    };
+                    
+                    // Change to paused styling
+                    audioCard.classList.remove('playing');
+                    audioCard.classList.add('paused');
+                });
+
+                audio.addEventListener('timeupdate', () => {
+                    audioStates[fileId] = {
+                        currentTime: audio.currentTime,
+                        duration: audio.duration
+                    };
+                });
+
+                // Clear saved position when audio ends
+                audio.addEventListener('ended', () => {
+                    delete audioStates[fileId];
+                    currentlyPlaying = null;
+                    audioCard.classList.remove('playing', 'paused');
+                });
+            });
+
+            // Restart button functionality
+            restartButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const fileId = btn.dataset.fileId;
+                    const audio = document.querySelector(`[data-file-id="${fileId}"]`);
+                    const audioCard = audio.closest('.audio-card');
+                    
+                    // Clear saved state and restart
+                    delete audioStates[fileId];
+                    audio.currentTime = 0;
+                    
+                    // Remove highlighting from all cards
+                    document.querySelectorAll('.audio-card').forEach(card => {
+                        card.classList.remove('playing', 'paused');
+                    });
+                    
+                    // Pause any currently playing audio
+                    document.querySelectorAll('.audio-player').forEach(otherAudio => {
+                        if (otherAudio !== audio && !otherAudio.paused) {
+                            otherAudio.pause();
+                        }
+                    });
+                    
+                    // Start playing and highlight
+                    audio.play();
+                    audioCard.classList.add('playing');
+                    currentlyPlaying = fileId;
+                });
+            });
         }
 
         function handleSearch() {
-            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
-            
-            if (!searchTerm) {
-                filteredFiles = [...allAudioFiles];
-            } else {
-                filteredFiles = allAudioFiles.filter(file => 
-                    file.displayName.toLowerCase().includes(searchTerm) ||
-                    file.name.toLowerCase().includes(searchTerm)
-                );
-            }
-            
+            // Search functionality removed until transcription is available
+            filteredFiles = [...allAudioFiles];
             renderAudioGrid();
         }
 
         // Event listeners
-        document.getElementById('searchBox').addEventListener('input', handleSearch);
+        // Search removed until transcription available
 
         // Initialize
         loadAudioFiles();
