@@ -135,9 +135,47 @@
             border: 1px solid #f0f0f0;
         }
 
-        .audio-card:hover {
+        .audio-card.playing {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: 2px solid #667eea;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
             transform: translateY(-5px);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+        }
+
+        .audio-card.playing .card-header {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .audio-card.playing .card-title {
+            color: white;
+            font-weight: 700;
+        }
+
+        .audio-card.playing .card-meta {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .audio-card.playing .file-size {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .audio-card.paused {
+            background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
+            border: 2px solid #fdcb6e;
+            box-shadow: 0 8px 25px rgba(253, 203, 110, 0.2);
+        }
+
+        .audio-card.paused .card-header {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .audio-card.paused .card-title {
+            color: #2d3436;
+            font-weight: 600;
         }
 
         .card-header {
@@ -179,6 +217,23 @@
         .audio-player {
             width: 100%;
             margin-bottom: 1rem;
+            height: 60px; /* Make the entire audio control taller */
+        }
+
+        /* Make play/pause buttons much bigger */
+        .audio-player::-webkit-media-controls-play-button,
+        .audio-player::-webkit-media-controls-pause-button {
+            width: 60px !important;
+            height: 60px !important;
+            transform: scale(2);
+        }
+
+        /* Firefox styling */
+        .audio-player::-moz-media-controls-play-button,
+        .audio-player::-moz-media-controls-pause-button {
+            width: 60px !important;
+            height: 60px !important;
+            transform: scale(2);
         }
 
         .audio-controls {
@@ -422,14 +477,24 @@
 
             audioPlayers.forEach(audio => {
                 const fileId = audio.dataset.fileId;
+                const audioCard = audio.closest('.audio-card');
 
                 // Restore saved position if available
                 if (audioStates[fileId]) {
                     audio.currentTime = audioStates[fileId].currentTime;
+                    // If this was the previously playing file, mark it as paused
+                    if (currentlyPlaying === fileId) {
+                        audioCard.classList.add('paused');
+                    }
                 }
 
                 // When user starts playing
                 audio.addEventListener('play', () => {
+                    // Remove highlighting from all other cards
+                    document.querySelectorAll('.audio-card').forEach(card => {
+                        card.classList.remove('playing', 'paused');
+                    });
+
                     // Pause all other audio players
                     audioPlayers.forEach(otherAudio => {
                         if (otherAudio !== audio && !otherAudio.paused) {
@@ -442,15 +507,22 @@
                             otherAudio.pause();
                         }
                     });
+
+                    // Highlight current playing card
+                    audioCard.classList.add('playing');
                     currentlyPlaying = fileId;
                 });
 
-                // Save position when paused or time updates
+                // When paused
                 audio.addEventListener('pause', () => {
                     audioStates[fileId] = {
                         currentTime: audio.currentTime,
                         duration: audio.duration
                     };
+                    
+                    // Change to paused styling
+                    audioCard.classList.remove('playing');
+                    audioCard.classList.add('paused');
                 });
 
                 audio.addEventListener('timeupdate', () => {
@@ -464,6 +536,7 @@
                 audio.addEventListener('ended', () => {
                     delete audioStates[fileId];
                     currentlyPlaying = null;
+                    audioCard.classList.remove('playing', 'paused');
                 });
             });
 
@@ -472,11 +545,28 @@
                 btn.addEventListener('click', () => {
                     const fileId = btn.dataset.fileId;
                     const audio = document.querySelector(`[data-file-id="${fileId}"]`);
+                    const audioCard = audio.closest('.audio-card');
                     
                     // Clear saved state and restart
                     delete audioStates[fileId];
                     audio.currentTime = 0;
+                    
+                    // Remove highlighting from all cards
+                    document.querySelectorAll('.audio-card').forEach(card => {
+                        card.classList.remove('playing', 'paused');
+                    });
+                    
+                    // Pause any currently playing audio
+                    document.querySelectorAll('.audio-player').forEach(otherAudio => {
+                        if (otherAudio !== audio && !otherAudio.paused) {
+                            otherAudio.pause();
+                        }
+                    });
+                    
+                    // Start playing and highlight
                     audio.play();
+                    audioCard.classList.add('playing');
+                    currentlyPlaying = fileId;
                 });
             });
         }
