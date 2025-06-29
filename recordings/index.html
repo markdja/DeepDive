@@ -364,6 +364,10 @@
             document.getElementById('lastUpdated').textContent = 'Today';
         }
 
+        // Audio playback management
+        let audioStates = {}; // Store playback positions
+        let currentlyPlaying = null;
+
         function renderAudioGrid() {
             const grid = document.getElementById('audioGrid');
             const noResults = document.getElementById('noResults');
@@ -376,7 +380,10 @@
             
             noResults.style.display = 'none';
             
-            grid.innerHTML = filteredFiles.map(file => `
+            // Sort files by name (this respects any numbering/naming scheme you use)
+            const sortedFiles = [...filteredFiles].sort((a, b) => a.name.localeCompare(b.name));
+            
+            grid.innerHTML = sortedFiles.map((file, index) => `
                 <div class="audio-card">
                     <div class="card-header">
                         <div class="card-title">${file.displayName}</div>
@@ -386,11 +393,14 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <audio class="audio-player" controls preload="none">
+                        <audio class="audio-player" controls preload="metadata" data-file-id="${file.name}">
                             <source src="${file.rawUrl}" type="audio/mpeg">
                             Your browser does not support the audio element.
                         </audio>
                         <div class="audio-controls">
+                            <button class="btn btn-primary restart-btn" data-file-id="${file.name}">
+                                🔄 Restart
+                            </button>
                             <a href="${file.downloadUrl}" class="btn btn-primary" download>
                                 📥 Download
                             </a>
@@ -401,6 +411,74 @@
                     </div>
                 </div>
             `).join('');
+
+            // Add event listeners to all audio players
+            setupAudioControls();
+        }
+
+        function setupAudioControls() {
+            const audioPlayers = document.querySelectorAll('.audio-player');
+            const restartButtons = document.querySelectorAll('.restart-btn');
+
+            audioPlayers.forEach(audio => {
+                const fileId = audio.dataset.fileId;
+
+                // Restore saved position if available
+                if (audioStates[fileId]) {
+                    audio.currentTime = audioStates[fileId].currentTime;
+                }
+
+                // When user starts playing
+                audio.addEventListener('play', () => {
+                    // Pause all other audio players
+                    audioPlayers.forEach(otherAudio => {
+                        if (otherAudio !== audio && !otherAudio.paused) {
+                            // Save the position before pausing
+                            const otherFileId = otherAudio.dataset.fileId;
+                            audioStates[otherFileId] = {
+                                currentTime: otherAudio.currentTime,
+                                duration: otherAudio.duration
+                            };
+                            otherAudio.pause();
+                        }
+                    });
+                    currentlyPlaying = fileId;
+                });
+
+                // Save position when paused or time updates
+                audio.addEventListener('pause', () => {
+                    audioStates[fileId] = {
+                        currentTime: audio.currentTime,
+                        duration: audio.duration
+                    };
+                });
+
+                audio.addEventListener('timeupdate', () => {
+                    audioStates[fileId] = {
+                        currentTime: audio.currentTime,
+                        duration: audio.duration
+                    };
+                });
+
+                // Clear saved position when audio ends
+                audio.addEventListener('ended', () => {
+                    delete audioStates[fileId];
+                    currentlyPlaying = null;
+                });
+            });
+
+            // Restart button functionality
+            restartButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const fileId = btn.dataset.fileId;
+                    const audio = document.querySelector(`[data-file-id="${fileId}"]`);
+                    
+                    // Clear saved state and restart
+                    delete audioStates[fileId];
+                    audio.currentTime = 0;
+                    audio.play();
+                });
+            });
         }
 
         function handleSearch() {
