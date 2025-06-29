@@ -1,4 +1,17 @@
-<!DOCTYPE html>
+function getTrafficLightStatus(fileId) {
+            if (completedFiles.has(fileId)) return 'green';
+            if (listenedFiles.has(fileId)) return 'yellow';
+            return 'red';
+        }
+
+        function getTrafficLightSymbol(status) {
+            switch(status) {
+                case 'green': return '✓';
+                case 'yellow': return '◐';
+                case 'red': return '○';
+                default: return '○';
+            }
+        }<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -11,15 +24,27 @@
             box-sizing: border-box;
         }
 
-        function updateListenedIndicator(audioCard, fileId) {
-            const header = audioCard.querySelector('.card-header');
-            const existingIndicator = header.querySelector('.listened-indicator');
+        function updateTrafficLight(audioCard, fileId) {
+            const trafficLight = audioCard.querySelector('.traffic-light');
+            const status = getTrafficLightStatus(fileId);
+            const symbol = getTrafficLightSymbol(status);
             
-            if (listenedFiles.has(fileId) && !existingIndicator) {
-                const indicator = document.createElement('div');
-                indicator.className = 'listened-indicator';
-                indicator.innerHTML = '✓';
-                header.appendChild(indicator);
+            trafficLight.className = `traffic-light ${status}`;
+            trafficLight.textContent = symbol;
+        }
+
+        function togglePersistence() {
+            persistenceEnabled = document.getElementById('persistenceCheckbox').checked;
+            
+            if (persistenceEnabled) {
+                saveProgress();
+            } else {
+                // Clear saved data when disabled
+                try {
+                    localStorage.removeItem('deepdive-audio-progress');
+                } catch (e) {
+                    console.log('Could not clear saved data');
+                }
             }
         }
 
@@ -190,21 +215,55 @@
             font-weight: 600;
         }
 
-        .listened-indicator {
+        .traffic-light {
             position: absolute;
             top: 10px;
             right: 10px;
-            background: #27ae60;
-            color: white;
-            border-radius: 50%;
             width: 24px;
             height: 24px;
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: bold;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            border: 2px solid white;
+        }
+
+        .traffic-light.red {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .traffic-light.yellow {
+            background: #f39c12;
+            color: white;
+        }
+
+        .traffic-light.green {
+            background: #27ae60;
+            color: white;
+        }
+
+        .persistence-controls {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            margin-top: 1rem;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .persistence-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .persistence-toggle input[type="checkbox"] {
+            transform: scale(1.2);
         }
 
         .card-header {
@@ -359,6 +418,16 @@
                     <span class="stat-label">Last Updated</span>
                 </div>
             </div>
+            
+            <div class="persistence-controls">
+                <div class="persistence-toggle">
+                    <input type="checkbox" id="persistenceCheckbox" onchange="togglePersistence()">
+                    <label for="persistenceCheckbox">Remember my progress between visits</label>
+                </div>
+                <div style="font-size: 0.8rem; opacity: 0.8; margin-top: 0.5rem;">
+                    🔴 Not started • 🟡 Partially listened • 🟢 Fully listened
+                </div>
+            </div>
         </div>
 
         <div class="content">
@@ -410,6 +479,10 @@
 
                 filteredFiles = [...allAudioFiles];
                 updateStats();
+                
+                // Load saved progress if persistence is enabled
+                loadSavedProgress();
+                
                 renderAudioGrid();
                 
                 document.getElementById('loadingState').style.display = 'none';
@@ -448,7 +521,43 @@
         // Audio playback management
         let audioStates = {}; // Store playback positions
         let listenedFiles = new Set(); // Track which files have been played
+        let completedFiles = new Set(); // Track which files have been fully listened to
         let currentlyPlaying = null;
+        let persistenceEnabled = false; // Whether to save to localStorage
+
+        // Load saved data from localStorage on page load
+        function loadSavedProgress() {
+            if (!persistenceEnabled) return;
+            
+            try {
+                const saved = localStorage.getItem('deepdive-audio-progress');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    audioStates = data.audioStates || {};
+                    listenedFiles = new Set(data.listenedFiles || []);
+                    completedFiles = new Set(data.completedFiles || []);
+                }
+            } catch (e) {
+                console.log('Could not load saved progress');
+            }
+        }
+
+        // Save progress to localStorage
+        function saveProgress() {
+            if (!persistenceEnabled) return;
+            
+            try {
+                const data = {
+                    audioStates: audioStates,
+                    listenedFiles: Array.from(listenedFiles),
+                    completedFiles: Array.from(completedFiles),
+                    lastUpdated: Date.now()
+                };
+                localStorage.setItem('deepdive-audio-progress', JSON.stringify(data));
+            } catch (e) {
+                console.log('Could not save progress');
+            }
+        }
 
         function renderAudioGrid() {
             const grid = document.getElementById('audioGrid');
@@ -465,10 +574,14 @@
             // Sort files by name (this respects any numbering/naming scheme you use)
             const sortedFiles = [...filteredFiles].sort((a, b) => a.name.localeCompare(b.name));
             
-            grid.innerHTML = sortedFiles.map((file, index) => `
+            grid.innerHTML = sortedFiles.map((file, index) => {
+                const status = getTrafficLightStatus(file.name);
+                const symbol = getTrafficLightSymbol(status);
+                
+                return `
                 <div class="audio-card">
                     <div class="card-header">
-                        ${listenedFiles.has(file.name) ? '<div class="listened-indicator">✓</div>' : ''}
+                        <div class="traffic-light ${status}">${symbol}</div>
                         <div class="card-title">${file.displayName}</div>
                         <div class="card-meta">
                             <span>MP3 Audio</span>
@@ -493,7 +606,8 @@
                         </div>
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
 
             // Add event listeners to all audio players
             setupAudioControls();
@@ -543,8 +657,9 @@
                     audioCard.classList.add('playing');
                     currentlyPlaying = fileId;
                     
-                    // Update the listened indicator
-                    updateListenedIndicator(audioCard, fileId);
+                    // Update the traffic light
+                    updateTrafficLight(audioCard, fileId);
+                    saveProgress();
                 });
 
                 // When paused
@@ -564,13 +679,28 @@
                         currentTime: audio.currentTime,
                         duration: audio.duration
                     };
+                    
+                    // Check if audio is nearly finished (within last 5 seconds or 95% complete)
+                    const remaining = audio.duration - audio.currentTime;
+                    const percentComplete = (audio.currentTime / audio.duration) * 100;
+                    
+                    if (remaining <= 5 || percentComplete >= 95) {
+                        if (!completedFiles.has(fileId)) {
+                            completedFiles.add(fileId);
+                            updateTrafficLight(audioCard, fileId);
+                            saveProgress();
+                        }
+                    }
                 });
 
                 // Clear saved position when audio ends
                 audio.addEventListener('ended', () => {
+                    completedFiles.add(fileId);
                     delete audioStates[fileId];
                     currentlyPlaying = null;
                     audioCard.classList.remove('playing', 'paused');
+                    updateTrafficLight(audioCard, fileId);
+                    saveProgress();
                 });
             });
 
@@ -616,6 +746,17 @@
 
         // Initialize
         loadAudioFiles();
+        
+        // Check if user previously enabled persistence
+        try {
+            const saved = localStorage.getItem('deepdive-audio-progress');
+            if (saved) {
+                document.getElementById('persistenceCheckbox').checked = true;
+                persistenceEnabled = true;
+            }
+        } catch (e) {
+            // localStorage not available
+        }
     </script>
 </body>
 </html>
