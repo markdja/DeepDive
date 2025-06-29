@@ -327,68 +327,47 @@
 
         async function loadAudioFiles() {
             try {
-                // Try GitHub API first
-                let response = await fetch(GITHUB_API_URL);
+                // First try to get files from GitHub API
+                const response = await fetch(GITHUB_API_URL, {
+                    headers: {
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                });
                 
-                if (!response.ok) {
-                    throw new Error(`GitHub API failed: ${response.status}`);
-                }
-                
-                const files = await response.json();
-                const mp3Files = files.filter(file => 
-                    file.name.toLowerCase().endsWith('.mp3') && file.type === 'file'
-                );
+                if (response.ok) {
+                    const files = await response.json();
+                    const mp3Files = files.filter(file => 
+                        file.name.toLowerCase().endsWith('.mp3') && file.type === 'file'
+                    );
 
-                allAudioFiles = mp3Files.map(file => ({
-                    name: file.name,
-                    displayName: formatFileName(file.name),
-                    size: file.size,
-                    downloadUrl: file.download_url,
-                    rawUrl: RAW_BASE_URL + encodeURIComponent(file.name),
+                    if (mp3Files.length > 0) {
+                        allAudioFiles = mp3Files.map(file => ({
+                            name: file.name,
+                            displayName: formatFileName(file.name),
+                            size: file.size,
+                            downloadUrl: file.download_url,
+                            rawUrl: RAW_BASE_URL + encodeURIComponent(file.name),
+                            lastModified: new Date().toLocaleDateString()
+                        }));
+                    } else {
+                        throw new Error('No MP3 files found via API');
+                    }
+                } else {
+                    throw new Error(`API responded with ${response.status}`);
+                }
+            } catch (error) {
+                console.log('GitHub API unavailable, using known file list:', error.message);
+                
+                // Fallback to known files list
+                allAudioFiles = KNOWN_FILES.map(filename => ({
+                    name: filename,
+                    displayName: formatFileName(filename),
+                    size: 2300000, // Approximate size
+                    downloadUrl: RAW_BASE_URL + encodeURIComponent(filename),
+                    rawUrl: RAW_BASE_URL + encodeURIComponent(filename),
                     lastModified: new Date().toLocaleDateString()
                 }));
-
-                filteredFiles = [...allAudioFiles];
-                updateStats();
-                renderAudioGrid();
-                
-                document.getElementById('loadingState').style.display = 'none';
-                document.getElementById('mainContent').style.display = 'block';
-                
-            } catch (error) {
-                console.error('Error loading files:', error);
-                
-                // Fallback: Load a predefined list if API fails
-                await loadFallbackFiles();
             }
-        }
-
-        async function loadFallbackFiles() {
-            // Fallback file list - you can manually update this when you add files
-            const fallbackFiles = [
-                'AI and the future of human potential.mp3',
-                'AI in healthcare transformation.mp3',
-                'Blockchain beyond cryptocurrency.mp3',
-                'Climate change solutions.mp3',
-                'Consciousness and AI.mp3',
-                'Digital transformation strategies.mp3',
-                'Future of work automation.mp3',
-                'Quantum computing primer.mp3',
-                'Renewable energy innovations.mp3',
-                'Space exploration next steps.mp3',
-                'Sustainable business models.mp3',
-                'The metaverse explained.mp3',
-                'Virtual reality applications.mp3'
-            ];
-
-            allAudioFiles = fallbackFiles.map(filename => ({
-                name: filename,
-                displayName: formatFileName(filename),
-                size: 2300000, // Approximate size in bytes
-                downloadUrl: RAW_BASE_URL + encodeURIComponent(filename),
-                rawUrl: RAW_BASE_URL + encodeURIComponent(filename),
-                lastModified: new Date().toLocaleDateString()
-            }));
 
             filteredFiles = [...allAudioFiles];
             updateStats();
