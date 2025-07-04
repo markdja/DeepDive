@@ -627,14 +627,14 @@
                     file.name.toLowerCase().endsWith('.mp3') && file.type === 'file'
                 );
 
-                allAudioFiles = mp3Files.map(file => ({
+                allAudioFiles = mp3Files.map((file, index) => ({
                     name: file.name,
                     displayName: formatFileName(file.name),
                     size: file.size,
                     downloadUrl: file.download_url,
                     rawUrl: RAW_BASE_URL + encodeURIComponent(file.name),
                     lastModified: new Date().toLocaleDateString(),
-                    created: new Date(file.sha).getTime() // Use sha as a pseudo-date
+                    created: extractDateFromFilename(file.name) || index // Use filename date or fallback to index
                 }));
 
                 filteredFiles = [...allAudioFiles];
@@ -664,6 +664,49 @@
                 }
                 errorDiv.style.display = 'block';
             }
+        }
+
+        function extractDateFromFilename(filename) {
+            // Try to extract date from filename patterns like:
+            // "2024-01-15_recording.mp3", "recording_2024-01-15.mp3", etc.
+            const datePatterns = [
+                /(\d{4})-(\d{2})-(\d{2})/,  // YYYY-MM-DD
+                /(\d{4})(\d{2})(\d{2})/,    // YYYYMMDD
+                /(\d{2})-(\d{2})-(\d{4})/,  // DD-MM-YYYY
+                /(\d{2})(\d{2})(\d{4})/     // DDMMYYYY
+            ];
+            
+            for (let pattern of datePatterns) {
+                const match = filename.match(pattern);
+                if (match) {
+                    let year, month, day;
+                    if (pattern.source.includes('(\\d{4})') && pattern.source.indexOf('(\\d{4})') === 1) {
+                        // YYYY-MM-DD or YYYYMMDD
+                        year = parseInt(match[1]);
+                        month = parseInt(match[2]) - 1; // JavaScript months are 0-based
+                        day = parseInt(match[3]);
+                    } else {
+                        // DD-MM-YYYY or DDMMYYYY
+                        day = parseInt(match[1]);
+                        month = parseInt(match[2]) - 1;
+                        year = parseInt(match[3]);
+                    }
+                    
+                    const date = new Date(year, month, day);
+                    if (!isNaN(date.getTime()) && year >= 2020 && year <= 2025) {
+                        return date.getTime();
+                    }
+                }
+            }
+            
+            // If no date found in filename, try to extract numbers and use as ordering
+            const numbers = filename.match(/\d+/g);
+            if (numbers && numbers.length > 0) {
+                // Use the first significant number found (assuming it might be a sequence number)
+                return parseInt(numbers[0]);
+            }
+            
+            return null;
         }
 
         function formatFileName(filename) {
