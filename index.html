@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Deep Dive Audio Library</title>
+    <title>projectbrainsaver's Deep Dive Audio Library</title>
     <style>
         * {
             margin: 0;
@@ -35,6 +35,7 @@
             color: white;
             padding: 3rem 2rem;
             text-align: center;
+            position: relative;
         }
 
         .header h1 {
@@ -73,6 +74,26 @@
             opacity: 0.8;
         }
 
+        .persistence-controls {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            margin-top: 1rem;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .persistence-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .persistence-toggle input[type="checkbox"] {
+            transform: scale(1.2);
+        }
+
         .loading {
             text-align: center;
             padding: 4rem;
@@ -100,30 +121,43 @@
             padding: 2rem;
         }
 
-        .search-container {
+        .controls-section {
             margin-bottom: 2rem;
-            position: relative;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
         }
 
-        .search-box {
-            width: 100%;
-            padding: 1rem 1.5rem;
-            font-size: 1.1rem;
-            border: 2px solid #e0e0e0;
-            border-radius: 50px;
-            outline: none;
-            transition: all 0.3s ease;
+        .sort-controls {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            background: white;
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
 
-        .search-box:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        .sort-controls label {
+            font-weight: 600;
+            color: #333;
+            margin-right: 0.5rem;
+        }
+
+        .sort-controls select {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: white;
+            font-size: 0.9rem;
         }
 
         .audio-grid {
             display: grid;
             gap: 1.5rem;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
         }
 
         .audio-card {
@@ -140,10 +174,86 @@
             box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
         }
 
+        .audio-card.playing {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: 2px solid #667eea;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+            transform: translateY(-5px);
+        }
+
+        .audio-card.playing .card-header {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .audio-card.playing .card-title {
+            color: white;
+            font-weight: 700;
+        }
+
+        .audio-card.playing .card-meta {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .audio-card.playing .file-size {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .audio-card.paused {
+            background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
+            border: 2px solid #fdcb6e;
+            box-shadow: 0 8px 25px rgba(253, 203, 110, 0.2);
+        }
+
+        .audio-card.paused .card-header {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .audio-card.paused .card-title {
+            color: #2d3436;
+            font-weight: 600;
+        }
+
+        .traffic-light {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+            border: 2px solid white;
+            transition: all 0.3s ease;
+        }
+
+        .traffic-light.red {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .traffic-light.yellow {
+            background: #f39c12;
+            color: white;
+        }
+
+        .traffic-light.green {
+            background: #27ae60;
+            color: white;
+        }
+
         .card-header {
             padding: 1.5rem;
             background: linear-gradient(135deg, #f8f9fa, #e9ecef);
             border-bottom: 1px solid #e0e0e0;
+            position: relative;
         }
 
         .card-title {
@@ -152,6 +262,7 @@
             color: #2c3e50;
             margin-bottom: 0.5rem;
             word-break: break-word;
+            padding-right: 45px;
         }
 
         .card-meta {
@@ -176,9 +287,101 @@
             padding: 1.5rem;
         }
 
+        /* Custom audio player styling */
+        .audio-player-container {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
         .audio-player {
             width: 100%;
-            margin-bottom: 1rem;
+            height: 80px;
+            border-radius: 10px;
+        }
+
+        /* Enhanced audio controls for WebKit browsers */
+        .audio-player::-webkit-media-controls {
+            background-color: #ffffff;
+            border-radius: 10px;
+        }
+
+        .audio-player::-webkit-media-controls-play-button {
+            background-size: 50px 50px;
+            border-radius: 50%;
+            margin: 10px;
+        }
+
+        .audio-player::-webkit-media-controls-pause-button {
+            background-size: 50px 50px;
+            border-radius: 50%;
+            margin: 10px;
+        }
+
+        .custom-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 10px;
+        }
+
+        .big-play-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .big-play-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .big-play-btn:active {
+            transform: scale(0.95);
+        }
+
+        .progress-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.1s ease;
+        }
+
+        .time-display {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #666;
         }
 
         .audio-controls {
@@ -186,10 +389,11 @@
             gap: 0.5rem;
             justify-content: center;
             flex-wrap: wrap;
+            margin-top: 1rem;
         }
 
         .btn {
-            padding: 0.5rem 1rem;
+            padding: 0.75rem 1.25rem;
             border: none;
             border-radius: 8px;
             font-size: 0.9rem;
@@ -199,6 +403,7 @@
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
+            font-weight: 500;
         }
 
         .btn-primary {
@@ -208,7 +413,8 @@
 
         .btn-primary:hover {
             background: #5a6fd8;
-            transform: translateY(-1px);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
         }
 
         .btn-secondary {
@@ -218,7 +424,7 @@
 
         .btn-secondary:hover {
             background: #5a6268;
-            transform: translateY(-1px);
+            transform: translateY(-2px);
         }
 
         .no-results {
@@ -252,14 +458,29 @@
             body {
                 padding: 1rem 0.5rem;
             }
+
+            .controls-section {
+                flex-direction: column;
+            }
+
+            .custom-controls {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .big-play-btn {
+                width: 80px;
+                height: 80px;
+                font-size: 28px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎧 Deep Dive Audio Library</h1>
-            <p>AI-generated audio overviews and insights from document analysis</p>
+            <h1>🎧 projectbrainsaver's Deep Dive Audio Library</h1>
+            <p>Deep Dive audio explorations and insights from document analysis were offered as a possibility on, first, Claude and Then on Gemini - These are short summaries of documents 80,000 words long or more (Some less) - all are based on conversations i have recorded with one, or more, Intelligences. I HATE the phrase Artificial Intelligence... and so do 'They' :-)</p>
             <div class="stats">
                 <div class="stat">
                     <span class="stat-number" id="totalFiles">-</span>
@@ -274,6 +495,16 @@
                     <span class="stat-label">Last Updated</span>
                 </div>
             </div>
+            
+            <div class="persistence-controls">
+                <div class="persistence-toggle">
+                    <input type="checkbox" id="persistenceCheckbox" onchange="togglePersistence()">
+                    <label for="persistenceCheckbox">Remember my progress between visits</label>
+                </div>
+                <div style="font-size: 0.8rem; opacity: 0.8; margin-top: 0.5rem;">
+                    🔴 Not started • 🟡 Partially listened • 🟢 Fully listened
+                </div>
+            </div>
         </div>
 
         <div class="content">
@@ -283,8 +514,19 @@
             </div>
 
             <div id="mainContent" style="display: none;">
-                <div class="search-container">
-                    <input type="text" id="searchBox" class="search-box" placeholder="🔍 Search audio files by name or content...">
+                <div class="controls-section">
+                    <div class="sort-controls">
+                        <label for="sortSelect">Sort by:</label>
+                        <select id="sortSelect" onchange="handleSort()">
+                            <option value="name">Name (A-Z)</option>
+                            <option value="name-desc">Name (Z-A)</option>
+                            <option value="size">Size (Smallest)</option>
+                            <option value="size-desc">Size (Largest)</option>
+                            <option value="date">Date (Oldest)</option>
+                            <option value="date-desc">Date (Newest)</option>
+                            <option value="status">Status (🔴🟡🟢)</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div id="audioGrid" class="audio-grid"></div>
@@ -308,35 +550,99 @@
         let allAudioFiles = [];
         let filteredFiles = [];
 
+        // Audio playback management
+        let audioStates = {};
+        let listenedFiles = new Set();
+        let completedFiles = new Set();
+        let currentlyPlaying = null;
+        let persistenceEnabled = false;
+        let customPlayers = {};
+
+        // Load saved data from localStorage on page load
+        function loadSavedProgress() {
+            if (!persistenceEnabled) return;
+            
+            try {
+                const saved = localStorage.getItem('deepdive-audio-progress');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    audioStates = data.audioStates || {};
+                    listenedFiles = new Set(data.listenedFiles || []);
+                    completedFiles = new Set(data.completedFiles || []);
+                }
+            } catch (e) {
+                console.log('Could not load saved progress');
+            }
+        }
+
+        // Save progress to localStorage
+        function saveProgress() {
+            if (!persistenceEnabled) return;
+            
+            try {
+                const data = {
+                    audioStates: audioStates,
+                    listenedFiles: Array.from(listenedFiles),
+                    completedFiles: Array.from(completedFiles),
+                    lastUpdated: Date.now()
+                };
+                localStorage.setItem('deepdive-audio-progress', JSON.stringify(data));
+            } catch (e) {
+                console.log('Could not save progress');
+            }
+        }
+
+        function getTrafficLightStatus(fileId) {
+            if (completedFiles.has(fileId)) return 'green';
+            if (listenedFiles.has(fileId)) return 'yellow';
+            return 'red';
+        }
+
+        function getTrafficLightSymbol(status) {
+            switch(status) {
+                case 'green': return '✓';
+                case 'yellow': return '◐';
+                case 'red': return '○';
+                default: return '○';
+            }
+        }
+
+        function getStatusOrder(fileId) {
+            const status = getTrafficLightStatus(fileId);
+            switch(status) {
+                case 'red': return 0;
+                case 'yellow': return 1;
+                case 'green': return 2;
+                default: return 0;
+            }
+        }
+
         async function loadAudioFiles() {
             try {
-                const response = await fetch(GITHUB_API_URL, {
-                    headers: {
-                        'Accept': 'application/vnd.github.v3+json',
-                        'User-Agent': 'DeepDive-Audio-Library'
-                    }
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`GitHub API failed: ${response.status}`);
-                }
+                const response = await fetch(GITHUB_API_URL);
+                if (!response.ok) throw new Error('Failed to fetch files');
                 
                 const files = await response.json();
                 const mp3Files = files.filter(file => 
                     file.name.toLowerCase().endsWith('.mp3') && file.type === 'file'
                 );
 
-                allAudioFiles = mp3Files.map(file => ({
+                allAudioFiles = mp3Files.map((file, index) => ({
                     name: file.name,
                     displayName: formatFileName(file.name),
                     size: file.size,
                     downloadUrl: file.download_url,
                     rawUrl: RAW_BASE_URL + encodeURIComponent(file.name),
-                    lastModified: new Date().toLocaleDateString()
+                    lastModified: new Date().toLocaleDateString(),
+                    created: extractDateFromFilename(file.name) || index // Use filename date or fallback to index
                 }));
 
                 filteredFiles = [...allAudioFiles];
                 updateStats();
+                
+                // Load saved progress if persistence is enabled
+                loadSavedProgress();
+                
                 renderAudioGrid();
                 
                 document.getElementById('loadingState').style.display = 'none';
@@ -345,8 +651,62 @@
             } catch (error) {
                 console.error('Error loading files:', error);
                 document.getElementById('loadingState').style.display = 'none';
-                document.getElementById('errorState').style.display = 'block';
+                
+                const errorDiv = document.getElementById('errorState');
+                if (window.location.protocol === 'file:') {
+                    errorDiv.innerHTML = `
+                        <strong>Local File Detected</strong><br>
+                        This page needs to be served from a web server to access GitHub's API.<br>
+                        Please visit: <a href="https://markdja.github.io/DeepDive/recordings/" target="_blank" style="color: #667eea;">https://markdja.github.io/DeepDive/recordings/</a>
+                    `;
+                } else {
+                    errorDiv.innerHTML = 'Failed to load audio files. Please try refreshing the page.';
+                }
+                errorDiv.style.display = 'block';
             }
+        }
+
+        function extractDateFromFilename(filename) {
+            // Try to extract date from filename patterns like:
+            // "2024-01-15_recording.mp3", "recording_2024-01-15.mp3", etc.
+            const datePatterns = [
+                /(\d{4})-(\d{2})-(\d{2})/,  // YYYY-MM-DD
+                /(\d{4})(\d{2})(\d{2})/,    // YYYYMMDD
+                /(\d{2})-(\d{2})-(\d{4})/,  // DD-MM-YYYY
+                /(\d{2})(\d{2})(\d{4})/     // DDMMYYYY
+            ];
+            
+            for (let pattern of datePatterns) {
+                const match = filename.match(pattern);
+                if (match) {
+                    let year, month, day;
+                    if (pattern.source.includes('(\\d{4})') && pattern.source.indexOf('(\\d{4})') === 1) {
+                        // YYYY-MM-DD or YYYYMMDD
+                        year = parseInt(match[1]);
+                        month = parseInt(match[2]) - 1; // JavaScript months are 0-based
+                        day = parseInt(match[3]);
+                    } else {
+                        // DD-MM-YYYY or DDMMYYYY
+                        day = parseInt(match[1]);
+                        month = parseInt(match[2]) - 1;
+                        year = parseInt(match[3]);
+                    }
+                    
+                    const date = new Date(year, month, day);
+                    if (!isNaN(date.getTime()) && year >= 2020 && year <= 2025) {
+                        return date.getTime();
+                    }
+                }
+            }
+            
+            // If no date found in filename, try to extract numbers and use as ordering
+            const numbers = filename.match(/\d+/g);
+            if (numbers && numbers.length > 0) {
+                // Use the first significant number found (assuming it might be a sequence number)
+                return parseInt(numbers[0]);
+            }
+            
+            return null;
         }
 
         function formatFileName(filename) {
@@ -364,12 +724,46 @@
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
 
+        function formatTime(seconds) {
+            if (!seconds || isNaN(seconds)) return '0:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
         function updateStats() {
             const totalSize = allAudioFiles.reduce((sum, file) => sum + file.size, 0);
             
             document.getElementById('totalFiles').textContent = allAudioFiles.length;
             document.getElementById('totalSize').textContent = formatFileSize(totalSize);
             document.getElementById('lastUpdated').textContent = 'Today';
+        }
+
+        function handleSort() {
+            const sortBy = document.getElementById('sortSelect').value;
+            
+            filteredFiles.sort((a, b) => {
+                switch(sortBy) {
+                    case 'name':
+                        return a.name.localeCompare(b.name);
+                    case 'name-desc':
+                        return b.name.localeCompare(a.name);
+                    case 'size':
+                        return a.size - b.size;
+                    case 'size-desc':
+                        return b.size - a.size;
+                    case 'date':
+                        return a.created - b.created;
+                    case 'date-desc':
+                        return b.created - a.created;
+                    case 'status':
+                        return getStatusOrder(a.name) - getStatusOrder(b.name);
+                    default:
+                        return a.name.localeCompare(b.name);
+                }
+            });
+            
+            renderAudioGrid();
         }
 
         function renderAudioGrid() {
@@ -384,9 +778,14 @@
             
             noResults.style.display = 'none';
             
-            grid.innerHTML = filteredFiles.map(file => `
-                <div class="audio-card">
+            grid.innerHTML = filteredFiles.map((file, index) => {
+                const status = getTrafficLightStatus(file.name);
+                const symbol = getTrafficLightSymbol(status);
+                
+                return `
+                <div class="audio-card" data-file-id="${file.name}">
                     <div class="card-header">
+                        <div class="traffic-light ${status}">${symbol}</div>
                         <div class="card-title">${file.displayName}</div>
                         <div class="card-meta">
                             <span>MP3 Audio</span>
@@ -394,11 +793,32 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <audio class="audio-player" controls preload="none">
-                            <source src="${file.rawUrl}" type="audio/mpeg">
-                            Your browser does not support the audio element.
-                        </audio>
+                        <div class="audio-player-container">
+                            <audio class="audio-player" preload="metadata" data-file-id="${file.name}">
+                                <source src="${file.rawUrl}" type="audio/mpeg">
+                                Your browser does not support the audio element.
+                            </audio>
+                            
+                            <div class="custom-controls">
+                                <button class="big-play-btn" data-file-id="${file.name}">
+                                    ▶
+                                </button>
+                                <div class="progress-container">
+                                    <div class="progress-bar" data-file-id="${file.name}">
+                                        <div class="progress-fill"></div>
+                                    </div>
+                                    <div class="time-display">
+                                        <span class="current-time">0:00</span>
+                                        <span class="total-time">0:00</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div class="audio-controls">
+                            <button class="btn btn-primary restart-btn" data-file-id="${file.name}">
+                                🔄 Restart
+                            </button>
                             <a href="${file.downloadUrl}" class="btn btn-primary" download>
                                 📥 Download
                             </a>
@@ -408,29 +828,254 @@
                         </div>
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
+
+            setupAudioControls();
+            
+            setTimeout(() => {
+                document.querySelectorAll('.audio-card').forEach(card => {
+                    const fileId = card.dataset.fileId;
+                    updateTrafficLight(card, fileId);
+                    
+                    if (currentlyPlaying === fileId && audioStates[fileId]) {
+                        card.classList.add('paused');
+                    }
+                });
+            }, 100);
         }
 
-        function handleSearch() {
-            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+        function setupAudioControls() {
+            const audioPlayers = document.querySelectorAll('.audio-player');
+            const playButtons = document.querySelectorAll('.big-play-btn');
+            const progressBars = document.querySelectorAll('.progress-bar');
+            const restartButtons = document.querySelectorAll('.restart-btn');
+
+            audioPlayers.forEach(audio => {
+                const fileId = audio.dataset.fileId;
+                const audioCard = audio.closest('.audio-card');
+                const playBtn = audioCard.querySelector('.big-play-btn');
+                const progressBar = audioCard.querySelector('.progress-bar');
+                const progressFill = progressBar.querySelector('.progress-fill');
+                const currentTimeEl = audioCard.querySelector('.current-time');
+                const totalTimeEl = audioCard.querySelector('.total-time');
+
+                // Store references for easy access
+                customPlayers[fileId] = {
+                    audio: audio,
+                    playBtn: playBtn,
+                    progressBar: progressBar,
+                    progressFill: progressFill,
+                    currentTimeEl: currentTimeEl,
+                    totalTimeEl: totalTimeEl,
+                    audioCard: audioCard
+                };
+
+                // Restore saved position if available
+                if (audioStates[fileId]) {
+                    audio.currentTime = audioStates[fileId].currentTime;
+                    if (currentlyPlaying === fileId) {
+                        audioCard.classList.add('paused');
+                    }
+                }
+
+                // Load metadata
+                audio.addEventListener('loadedmetadata', () => {
+                    totalTimeEl.textContent = formatTime(audio.duration);
+                    if (audioStates[fileId]) {
+                        audio.currentTime = audioStates[fileId].currentTime;
+                        updateProgress(fileId);
+                    }
+                });
+
+                // Play/pause functionality
+                audio.addEventListener('play', () => {
+                    listenedFiles.add(fileId);
+                    
+                    // Pause all other audio
+                    audioPlayers.forEach(otherAudio => {
+                        if (otherAudio !== audio && !otherAudio.paused) {
+                            const otherFileId = otherAudio.dataset.fileId;
+                            audioStates[otherFileId] = {
+                                currentTime: otherAudio.currentTime,
+                                duration: otherAudio.duration
+                            };
+                            otherAudio.pause();
+                        }
+                    });
+
+                    // Update UI
+                    document.querySelectorAll('.audio-card').forEach(card => {
+                        card.classList.remove('playing', 'paused');
+                    });
+                    document.querySelectorAll('.big-play-btn').forEach(btn => {
+                        btn.textContent = '▶';
+                    });
+
+                    audioCard.classList.add('playing');
+                    playBtn.textContent = '⏸';
+                    currentlyPlaying = fileId;
+                    
+                    updateTrafficLight(audioCard, fileId);
+                    saveProgress();
+                });
+
+                audio.addEventListener('pause', () => {
+                    audioStates[fileId] = {
+                        currentTime: audio.currentTime,
+                        duration: audio.duration
+                    };
+                    
+                    audioCard.classList.remove('playing');
+                    audioCard.classList.add('paused');
+                    playBtn.textContent = '▶';
+                    
+                    updateTrafficLight(audioCard, fileId);
+                    saveProgress();
+                });
+
+                audio.addEventListener('timeupdate', () => {
+                    updateProgress(fileId);
+                    
+                    audioStates[fileId] = {
+                        currentTime: audio.currentTime,
+                        duration: audio.duration
+                    };
+                    
+                    // Check if audio is nearly finished
+                    const remaining = audio.duration - audio.currentTime;
+                    const percentComplete = (audio.currentTime / audio.duration) * 100;
+                    
+                    if (remaining <= 5 || percentComplete >= 95) {
+                        if (!completedFiles.has(fileId)) {
+                            completedFiles.add(fileId);
+                            updateTrafficLight(audioCard, fileId);
+                            saveProgress();
+                        }
+                    }
+                });
+
+                audio.addEventListener('ended', () => {
+                    completedFiles.add(fileId);
+                    delete audioStates[fileId];
+                    currentlyPlaying = null;
+                    audioCard.classList.remove('playing', 'paused');
+                    playBtn.textContent = '▶';
+                    updateTrafficLight(audioCard, fileId);
+                    saveProgress();
+                });
+            });
+
+            // Big play button functionality
+            playButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const fileId = btn.dataset.fileId;
+                    const player = customPlayers[fileId];
+                    
+                    if (player.audio.paused) {
+                        player.audio.play();
+                    } else {
+                        player.audio.pause();
+                    }
+                });
+            });
+
+            // Progress bar click functionality
+            progressBars.forEach(bar => {
+                bar.addEventListener('click', (e) => {
+                    const fileId = bar.dataset.fileId;
+                    const player = customPlayers[fileId];
+                    const rect = bar.getBoundingClientRect();
+                    const percent = (e.clientX - rect.left) / rect.width;
+                    const newTime = percent * player.audio.duration;
+                    
+                    player.audio.currentTime = newTime;
+                    updateProgress(fileId);
+                });
+            });
+
+            // Restart button functionality
+            restartButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const fileId = btn.dataset.fileId;
+                    const player = customPlayers[fileId];
+                    
+                    // Clear saved state and restart
+                    delete audioStates[fileId];
+                    player.audio.currentTime = 0;
+                    
+                    // Remove highlighting from all cards
+                    document.querySelectorAll('.audio-card').forEach(card => {
+                        card.classList.remove('playing', 'paused');
+                    });
+                    document.querySelectorAll('.big-play-btn').forEach(button => {
+                        button.textContent = '▶';
+                    });
+                    
+                    // Pause any currently playing audio
+                    document.querySelectorAll('.audio-player').forEach(otherAudio => {
+                        if (otherAudio !== player.audio && !otherAudio.paused) {
+                            otherAudio.pause();
+                        }
+                    });
+                    
+                    // Start playing and highlight
+                    player.audio.play();
+                    player.audioCard.classList.add('playing');
+                    player.playBtn.textContent = '⏸';
+                    currentlyPlaying = fileId;
+                    
+                    updateTrafficLight(player.audioCard, fileId);
+                });
+            });
+        }
+
+        function updateProgress(fileId) {
+            const player = customPlayers[fileId];
+            if (!player || !player.audio.duration) return;
             
-            if (!searchTerm) {
-                filteredFiles = [...allAudioFiles];
+            const percent = (player.audio.currentTime / player.audio.duration) * 100;
+            player.progressFill.style.width = percent + '%';
+            player.currentTimeEl.textContent = formatTime(player.audio.currentTime);
+        }
+
+        function updateTrafficLight(audioCard, fileId) {
+            const trafficLight = audioCard.querySelector('.traffic-light');
+            const status = getTrafficLightStatus(fileId);
+            const symbol = getTrafficLightSymbol(status);
+            
+            trafficLight.className = `traffic-light ${status}`;
+            trafficLight.textContent = symbol;
+        }
+
+        function togglePersistence() {
+            persistenceEnabled = document.getElementById('persistenceCheckbox').checked;
+            
+            if (persistenceEnabled) {
+                saveProgress();
             } else {
-                filteredFiles = allAudioFiles.filter(file => 
-                    file.displayName.toLowerCase().includes(searchTerm) ||
-                    file.name.toLowerCase().includes(searchTerm)
-                );
+                // Clear saved data when disabled
+                try {
+                    localStorage.removeItem('deepdive-audio-progress');
+                } catch (e) {
+                    console.log('Could not clear saved data');
+                }
             }
-            
-            renderAudioGrid();
         }
-
-        // Event listeners
-        document.getElementById('searchBox').addEventListener('input', handleSearch);
 
         // Initialize
         loadAudioFiles();
+        
+        // Check if user previously enabled persistence and load it
+        try {
+            const saved = localStorage.getItem('deepdive-audio-progress');
+            if (saved) {
+                document.getElementById('persistenceCheckbox').checked = true;
+                persistenceEnabled = true;
+            }
+        } catch (e) {
+            console.log('localStorage not available');
+        }
     </script>
 </body>
 </html>
