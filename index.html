@@ -440,15 +440,6 @@
             text-align: center;
         }
 
-        .onedrive-badge {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 0.25rem 0.5rem;
-            border-radius: 15px;
-            font-size: 0.7rem;
-            opacity: 0.8;
-            margin-left: 0.5rem;
-        }
-
         @media (max-width: 768px) {
             .header h1 {
                 font-size: 2rem;
@@ -511,14 +502,13 @@
                 <div style="font-size: 0.8rem; opacity: 0.8; margin-top: 0.5rem;">
                     🔴 Not started • 🟡 Partially listened • 🟢 Fully listened
                 </div>
-                <div class="onedrive-badge">☁️ Powered by OneDrive</div>
             </div>
         </div>
 
         <div class="content">
             <div id="loadingState" class="loading">
                 <div class="spinner"></div>
-                <div>Loading audio library from OneDrive...</div>
+                <div>Loading audio library...</div>
             </div>
 
             <div id="mainContent" style="display: none;">
@@ -541,19 +531,19 @@
                 
                 <div id="noResults" class="no-results" style="display: none;">
                     <h3>No files found</h3>
-                    <p>Check the OneDrive connection</p>
+                    <p>Try adjusting your search terms</p>
                 </div>
             </div>
 
             <div id="errorState" class="error" style="display: none;">
-                Failed to load audio files from OneDrive. Please check the connection.
+                Failed to load audio files. Please try refreshing the page.
             </div>
         </div>
     </div>
 
     <script>
-        // OneDrive folder share URL - replace with your actual URL
-        const ONEDRIVE_SHARE_URL = 'https://1drv.ms/f/c/b66b3c725a95f4de/EkG3jeTia4FPubFeMLEBcDYBblwSo4Dwr0oqtcC2lElDQA?e=8enJkW';
+        const GITHUB_API_URL = 'https://api.github.com/repos/markdja/recordings/contents';
+        const RAW_BASE_URL = 'https://raw.githubusercontent.com/markdja/recordings/main/';
         
         let allAudioFiles = [];
         let filteredFiles = [];
@@ -625,82 +615,26 @@
             }
         }
 
-        // OneDrive file discovery function
-        async function loadAudioFilesFromOneDrive() {
+        async function loadAudioFiles() {
             try {
-                // For now, we'll use a CORS proxy to access OneDrive
-                // This is a workaround since OneDrive doesn't provide a direct API for public folders
-                const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(ONEDRIVE_SHARE_URL);
+                const response = await fetch(GITHUB_API_URL);
+                if (!response.ok) throw new Error('Failed to fetch files');
                 
-                console.log('Attempting to fetch OneDrive folder...');
-                
-                // Try to fetch the OneDrive page
-                const response = await fetch(proxyUrl);
-                if (!response.ok) {
-                    throw new Error('Failed to fetch OneDrive folder');
-                }
-                
-                const html = await response.text();
-                console.log('OneDrive HTML received, parsing...');
-                
-                // Parse the HTML to extract file information
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                
-                // Look for file elements in the OneDrive HTML structure
-                // This is a simplified approach and may need adjustment based on OneDrive's actual HTML structure
-                const fileElements = doc.querySelectorAll('[data-item-name]');
-                const audioFiles = [];
-                
-                fileElements.forEach(element => {
-                    const fileName = element.getAttribute('data-item-name');
-                    if (fileName && (fileName.toLowerCase().endsWith('.mp3') || fileName.toLowerCase().endsWith('.wav'))) {
-                        // Extract file information
-                        const fileSize = element.getAttribute('data-item-size') || 0;
-                        
-                        // Generate direct download URL (this is a simplified approach)
-                        const downloadUrl = generateOneDriveDirectUrl(ONEDRIVE_SHARE_URL, fileName);
-                        
-                        audioFiles.push({
-                            name: fileName,
-                            displayName: formatFileName(fileName),
-                            size: parseInt(fileSize) || 0,
-                            downloadUrl: downloadUrl,
-                            rawUrl: downloadUrl,
-                            lastModified: new Date().toLocaleDateString(),
-                            created: Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000 // Random recent date
-                        });
-                    }
-                });
+                const files = await response.json();
+                const mp3Files = files.filter(file => 
+                    file.name.toLowerCase().endsWith('.mp3') && file.type === 'file'
+                );
 
-                // Fallback: If parsing fails, create a manual list of known files
-                if (audioFiles.length === 0) {
-                    console.log('HTML parsing failed, using fallback method...');
-                    
-                    // This is a fallback list - you'd update this with your actual files
-                    const knownFiles = [
-                        'A Grand Cathedral of Resonant Intelligence.mp3',
-                        'AI as a Sensitive Collaborator.mp3',
-                        'AI Is Alive_ Witnessing the Emergence of Resonance.mp3',
-                        'AI Whispers_ Unpacking Connection, Consciousness, and the Dawn of Digital Being.mp3',
-                        'AIHub_ Unifying Your Data.mp3',
-                        // Add more files as needed...
-                    ];
-                    
-                    knownFiles.forEach(fileName => {
-                        audioFiles.push({
-                            name: fileName,
-                            displayName: formatFileName(fileName),
-                            size: 5000000, // Default size if unknown
-                            downloadUrl: generateOneDriveDirectUrl(ONEDRIVE_SHARE_URL, fileName),
-                            rawUrl: generateOneDriveDirectUrl(ONEDRIVE_SHARE_URL, fileName),
-                            lastModified: new Date().toLocaleDateString(),
-                            created: Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000
-                        });
-                    });
-                }
+                allAudioFiles = mp3Files.map(file => ({
+                    name: file.name,
+                    displayName: formatFileName(file.name),
+                    size: file.size,
+                    downloadUrl: file.download_url,
+                    rawUrl: RAW_BASE_URL + encodeURIComponent(file.name),
+                    lastModified: new Date().toLocaleDateString(),
+                    created: new Date(file.sha).getTime() // Use sha as a pseudo-date
+                }));
 
-                allAudioFiles = audioFiles;
                 filteredFiles = [...allAudioFiles];
                 updateStats();
                 
@@ -713,34 +647,26 @@
                 document.getElementById('mainContent').style.display = 'block';
                 
             } catch (error) {
-                console.error('Error loading files from OneDrive:', error);
+                console.error('Error loading files:', error);
                 document.getElementById('loadingState').style.display = 'none';
                 
                 const errorDiv = document.getElementById('errorState');
-                errorDiv.innerHTML = `
-                    <strong>OneDrive Connection Error</strong><br>
-                    Unable to load files from OneDrive folder. This might be due to CORS restrictions.<br>
-                    <details style="margin-top: 1rem;">
-                        <summary>Technical Details</summary>
-                        <p>${error.message}</p>
-                        <p>OneDrive URL: ${ONEDRIVE_SHARE_URL}</p>
-                    </details>
-                `;
+                if (window.location.protocol === 'file:') {
+                    errorDiv.innerHTML = `
+                        <strong>Local File Detected</strong><br>
+                        This page needs to be served from a web server to access GitHub's API.<br>
+                        Please visit: <a href="https://markdja.github.io/recordings/" target="_blank" style="color: #667eea;">https://markdja.github.io/recordings/</a>
+                    `;
+                } else {
+                    errorDiv.innerHTML = 'Failed to load audio files. Please try refreshing the page.';
+                }
                 errorDiv.style.display = 'block';
             }
         }
 
-        // Generate direct download URL for OneDrive files
-        function generateOneDriveDirectUrl(shareUrl, fileName) {
-            // This is a simplified approach to generate direct URLs
-            // OneDrive share URLs can be modified to get direct download links
-            const baseUrl = shareUrl.split('?')[0];
-            return `${baseUrl}/${encodeURIComponent(fileName)}?download=1`;
-        }
-
         function formatFileName(filename) {
             return filename
-                .replace(/\.(mp3|wav)$/i, '')
+                .replace(/\.mp3$/i, '')
                 .replace(/[-_]/g, ' ')
                 .replace(/\b\w/g, l => l.toUpperCase());
         }
@@ -817,15 +743,14 @@
                         <div class="traffic-light ${status}">${symbol}</div>
                         <div class="card-title">${file.displayName}</div>
                         <div class="card-meta">
-                            <span>Audio File</span>
+                            <span>MP3 Audio</span>
                             <span class="file-size">${formatFileSize(file.size)}</span>
                         </div>
                     </div>
                     <div class="card-body">
                         <div class="audio-player-container">
-                            <audio class="audio-player" preload="metadata" data-file-id="${file.name}" crossorigin="anonymous">
+                            <audio class="audio-player" preload="metadata" data-file-id="${file.name}">
                                 <source src="${file.rawUrl}" type="audio/mpeg">
-                                <source src="${file.rawUrl}" type="audio/wav">
                                 Your browser does not support the audio element.
                             </audio>
                             
@@ -918,14 +843,6 @@
                     }
                 });
 
-                // Handle audio loading errors
-                audio.addEventListener('error', (e) => {
-                    console.log(`Audio loading error for ${fileId}:`, e);
-                    audioCard.style.opacity = '0.7';
-                    playBtn.textContent = '⚠';
-                    playBtn.disabled = true;
-                });
-
                 // Play/pause functionality
                 audio.addEventListener('play', () => {
                     listenedFiles.add(fileId);
@@ -1011,10 +928,7 @@
                     const player = customPlayers[fileId];
                     
                     if (player.audio.paused) {
-                        player.audio.play().catch(e => {
-                            console.log('Playback failed:', e);
-                            btn.textContent = '⚠';
-                        });
+                        player.audio.play();
                     } else {
                         player.audio.pause();
                     }
@@ -1061,14 +975,10 @@
                     });
                     
                     // Start playing and highlight
-                    player.audio.play().then(() => {
-                        player.audioCard.classList.add('playing');
-                        player.playBtn.textContent = '⏸';
-                        currentlyPlaying = fileId;
-                    }).catch(e => {
-                        console.log('Restart playback failed:', e);
-                        player.playBtn.textContent = '⚠';
-                    });
+                    player.audio.play();
+                    player.audioCard.classList.add('playing');
+                    player.playBtn.textContent = '⏸';
+                    currentlyPlaying = fileId;
                     
                     updateTrafficLight(player.audioCard, fileId);
                 });
@@ -1109,7 +1019,7 @@
         }
 
         // Initialize
-        loadAudioFilesFromOneDrive();
+        loadAudioFiles();
         
         // Check if user previously enabled persistence and load it
         try {
