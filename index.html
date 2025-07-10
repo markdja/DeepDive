@@ -217,6 +217,12 @@
             font-weight: 600;
         }
 
+        .audio-card.selected {
+            border: 4px solid #667eea;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.4);
+            transform: translateY(-3px);
+        }
+
         .traffic-light {
             position: absolute;
             top: 15px;
@@ -249,6 +255,22 @@
             color: white;
         }
 
+        .play-counter {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
         .card-header {
             padding: 1.5rem;
             background: linear-gradient(135deg, #f8f9fa, #e9ecef);
@@ -263,6 +285,7 @@
             margin-bottom: 0.5rem;
             word-break: break-word;
             padding-right: 45px;
+            padding-left: 45px;
         }
 
         .card-meta {
@@ -497,10 +520,11 @@
             <div class="persistence-controls">
                 <div class="persistence-toggle">
                     <input type="checkbox" id="persistenceCheckbox" onchange="togglePersistence()">
-                    <label for="persistenceCheckbox">Remember my progress between visits</label>
+                    <label for="persistenceCheckbox">Remember my personal progress between visits</label>
                 </div>
                 <div style="font-size: 0.8rem; opacity: 0.8; margin-top: 0.5rem;">
-                    🔴 Not started • 🟡 Partially listened • 🟢 Fully listened
+                    🔴 Not started • 🟡 Partially listened • 🟢 Fully listened<br>
+                    🎧 Play counts are always saved for everyone
                 </div>
             </div>
         </div>
@@ -555,18 +579,23 @@
         let currentlyPlaying = null;
         let persistenceEnabled = false;
         let customPlayers = {};
+        let playCounters = {}; // Track play counts for each file
 
         // Load saved data from localStorage on page load
         function loadSavedProgress() {
-            if (!persistenceEnabled) return;
-            
+            // Always load play counters (persistent for everyone)
             try {
                 const saved = localStorage.getItem('deepdive-audio-progress');
                 if (saved) {
                     const data = JSON.parse(saved);
-                    audioStates = data.audioStates || {};
-                    listenedFiles = new Set(data.listenedFiles || []);
-                    completedFiles = new Set(data.completedFiles || []);
+                    playCounters = data.playCounters || {};
+                    
+                    // Only load other progress if persistence is enabled
+                    if (persistenceEnabled) {
+                        audioStates = data.audioStates || {};
+                        listenedFiles = new Set(data.listenedFiles || []);
+                        completedFiles = new Set(data.completedFiles || []);
+                    }
                 }
             } catch (e) {
                 console.log('Could not load saved progress');
@@ -575,15 +604,26 @@
 
         // Save progress to localStorage
         function saveProgress() {
-            if (!persistenceEnabled) return;
-            
             try {
-                const data = {
-                    audioStates: audioStates,
-                    listenedFiles: Array.from(listenedFiles),
-                    completedFiles: Array.from(completedFiles),
-                    lastUpdated: Date.now()
-                };
+                // Always save play counters (persistent for everyone)
+                const existingData = localStorage.getItem('deepdive-audio-progress');
+                let data = {};
+                
+                if (existingData) {
+                    data = JSON.parse(existingData);
+                }
+                
+                // Always update play counters
+                data.playCounters = playCounters;
+                data.lastUpdated = Date.now();
+                
+                // Only save other progress if persistence is enabled
+                if (persistenceEnabled) {
+                    data.audioStates = audioStates;
+                    data.listenedFiles = Array.from(listenedFiles);
+                    data.completedFiles = Array.from(completedFiles);
+                }
+                
                 localStorage.setItem('deepdive-audio-progress', JSON.stringify(data));
             } catch (e) {
                 console.log('Could not save progress');
@@ -740,6 +780,9 @@
                 return `
                 <div class="audio-card" data-file-id="${file.name}">
                     <div class="card-header">
+                        <div class="play-counter" data-file-id="${file.name}">
+                            🎧 <span class="play-count">${playCounters[file.name] || 0}</span>
+                        </div>
                         <div class="traffic-light ${status}">${symbol}</div>
                         <div class="card-title">${file.displayName}</div>
                         <div class="card-meta">
@@ -792,9 +835,10 @@
                 document.querySelectorAll('.audio-card').forEach(card => {
                     const fileId = card.dataset.fileId;
                     updateTrafficLight(card, fileId);
+                    updatePlayCounter(fileId);
                     
                     if (currentlyPlaying === fileId && audioStates[fileId]) {
-                        card.classList.add('paused');
+                        card.classList.add('paused', 'selected');
                     }
                 });
             }, 100);
@@ -847,6 +891,11 @@
                 audio.addEventListener('play', () => {
                     listenedFiles.add(fileId);
                     
+                    // Increment play counter (always persistent)
+                    playCounters[fileId] = (playCounters[fileId] || 0) + 1;
+                    updatePlayCounter(fileId);
+                    saveProgress(); // Always save play counts
+                    
                     // Pause all other audio
                     audioPlayers.forEach(otherAudio => {
                         if (otherAudio !== audio && !otherAudio.paused) {
@@ -859,15 +908,16 @@
                         }
                     });
 
-                    // Update UI
+                    // Update UI - remove selection from all cards first
                     document.querySelectorAll('.audio-card').forEach(card => {
-                        card.classList.remove('playing', 'paused');
+                        card.classList.remove('playing', 'paused', 'selected');
                     });
                     document.querySelectorAll('.big-play-btn').forEach(btn => {
                         btn.textContent = '▶';
                     });
 
-                    audioCard.classList.add('playing');
+                    // Add selection and playing state to current card
+                    audioCard.classList.add('playing', 'selected');
                     playBtn.textContent = '⏸';
                     currentlyPlaying = fileId;
                     
@@ -882,7 +932,7 @@
                     };
                     
                     audioCard.classList.remove('playing');
-                    audioCard.classList.add('paused');
+                    audioCard.classList.add('paused', 'selected');
                     playBtn.textContent = '▶';
                     
                     updateTrafficLight(audioCard, fileId);
@@ -914,7 +964,7 @@
                     completedFiles.add(fileId);
                     delete audioStates[fileId];
                     currentlyPlaying = null;
-                    audioCard.classList.remove('playing', 'paused');
+                    audioCard.classList.remove('playing', 'paused', 'selected');
                     playBtn.textContent = '▶';
                     updateTrafficLight(audioCard, fileId);
                     saveProgress();
@@ -961,7 +1011,7 @@
                     
                     // Remove highlighting from all cards
                     document.querySelectorAll('.audio-card').forEach(card => {
-                        card.classList.remove('playing', 'paused');
+                        card.classList.remove('playing', 'paused', 'selected');
                     });
                     document.querySelectorAll('.big-play-btn').forEach(button => {
                         button.textContent = '▶';
@@ -976,7 +1026,7 @@
                     
                     // Start playing and highlight
                     player.audio.play();
-                    player.audioCard.classList.add('playing');
+                    player.audioCard.classList.add('playing', 'selected');
                     player.playBtn.textContent = '⏸';
                     currentlyPlaying = fileId;
                     
@@ -1003,30 +1053,60 @@
             trafficLight.textContent = symbol;
         }
 
+        function updatePlayCounter(fileId) {
+            const playCounterEl = document.querySelector(`[data-file-id="${fileId}"] .play-count`);
+            if (playCounterEl) {
+                playCounterEl.textContent = playCounters[fileId] || 0;
+            }
+        }
+
         function togglePersistence() {
             persistenceEnabled = document.getElementById('persistenceCheckbox').checked;
             
             if (persistenceEnabled) {
                 saveProgress();
             } else {
-                // Clear saved data when disabled
+                // Clear personal progress but keep play counters
                 try {
-                    localStorage.removeItem('deepdive-audio-progress');
+                    const saved = localStorage.getItem('deepdive-audio-progress');
+                    if (saved) {
+                        const data = JSON.parse(saved);
+                        const playCountsOnly = {
+                            playCounters: data.playCounters || {},
+                            lastUpdated: Date.now()
+                        };
+                        localStorage.setItem('deepdive-audio-progress', JSON.stringify(playCountsOnly));
+                    }
                 } catch (e) {
-                    console.log('Could not clear saved data');
+                    console.log('Could not clear personal data');
                 }
+                
+                // Reset personal tracking in memory
+                audioStates = {};
+                listenedFiles = new Set();
+                completedFiles = new Set();
+                
+                // Update UI to reflect changes
+                renderAudioGrid();
             }
         }
 
         // Initialize
         loadAudioFiles();
         
-        // Check if user previously enabled persistence and load it
+        // Always load play counters on page load
+        loadSavedProgress();
+        
+        // Check if user previously enabled persistence for personal progress
         try {
             const saved = localStorage.getItem('deepdive-audio-progress');
             if (saved) {
-                document.getElementById('persistenceCheckbox').checked = true;
-                persistenceEnabled = true;
+                const data = JSON.parse(saved);
+                // Only enable persistence checkbox if other personal data exists
+                if (data.audioStates || data.listenedFiles || data.completedFiles) {
+                    document.getElementById('persistenceCheckbox').checked = true;
+                    persistenceEnabled = true;
+                }
             }
         } catch (e) {
             console.log('localStorage not available');
