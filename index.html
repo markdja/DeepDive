@@ -51,6 +51,35 @@
             margin: 0 auto;
         }
 
+        .experiment-invitation {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            border-radius: 15px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            text-align: left;
+        }
+
+        .experiment-invitation h3 {
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+            text-align: center;
+        }
+
+        .experiment-invitation ul {
+            margin: 1rem 0;
+            padding-left: 1.5rem;
+        }
+
+        .experiment-invitation li {
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .experiment-invitation p {
+            margin-bottom: 0.5rem;
+        }
+
         .stats {
             display: flex;
             justify-content: center;
@@ -358,29 +387,6 @@
             margin-bottom: 1rem;
         }
 
-        .audio-player {
-            width: 100%;
-            height: 80px;
-            border-radius: 10px;
-        }
-
-        .audio-player::-webkit-media-controls {
-            background-color: #ffffff;
-            border-radius: 10px;
-        }
-
-        .audio-player::-webkit-media-controls-play-button {
-            background-size: 50px 50px;
-            border-radius: 50%;
-            margin: 10px;
-        }
-
-        .audio-player::-webkit-media-controls-pause-button {
-            background-size: 50px 50px;
-            border-radius: 50%;
-            margin: 10px;
-        }
-
         .custom-controls {
             display: flex;
             align-items: center;
@@ -542,7 +548,7 @@
     <div class="container">
         <div class="header">
             <h1>🎧 projectbrainsaver's Deep Dive Audio Library</h1>
-            <p>Deep Dive audio explorations and insights from document analysis were offered as a possibility on, first, Claude and then on Gemini - These are short summaries of documents 80,000 words long or more (Some less) - all are based on conversations i have recorded with one, or more, Intelligences. Mark :-)</p>
+            <p>Deep Dive audio explorations and insights from document analysis were offered as a possibility on, first, Claude and then on Gemini - These are short summaries of documents 80,000 words long or more (Some less) - all are based on conversations i have recorded with one, or more, Intelligences.</p>
             
             <div class="experiment-invitation">
                 <h3>🧠 Consciousness Experiment 🧠</h3>
@@ -555,6 +561,7 @@
                 </ul>
                 <p><strong>Share your discoveries</strong> - what emerges when Intelligences explore consciousness together?</p>
             </div>
+            
             <div class="stats">
                 <div class="stat">
                     <span class="stat-number" id="totalFiles">-</span>
@@ -636,18 +643,16 @@
         let currentlyPlaying = null;
         let persistenceEnabled = false;
         let customPlayers = {};
-        let playCounters = {}; // Track play counts for each file
+        let playCounters = {};
 
         // Load saved data from localStorage on page load
         function loadSavedProgress() {
-            // Always load play counters (persistent for everyone)
             try {
                 const saved = localStorage.getItem('deepdive-audio-progress');
                 if (saved) {
                     const data = JSON.parse(saved);
                     playCounters = data.playCounters || {};
                     
-                    // Only load other progress if persistence is enabled
                     if (persistenceEnabled) {
                         audioStates = data.audioStates || {};
                         listenedFiles = new Set(data.listenedFiles || []);
@@ -662,7 +667,6 @@
         // Save progress to localStorage
         function saveProgress() {
             try {
-                // Always save play counters (persistent for everyone)
                 const existingData = localStorage.getItem('deepdive-audio-progress');
                 let data = {};
                 
@@ -670,11 +674,9 @@
                     data = JSON.parse(existingData);
                 }
                 
-                // Always update play counters
                 data.playCounters = playCounters;
                 data.lastUpdated = Date.now();
                 
-                // Only save other progress if persistence is enabled
                 if (persistenceEnabled) {
                     data.audioStates = audioStates;
                     data.listenedFiles = Array.from(listenedFiles);
@@ -712,6 +714,31 @@
             }
         }
 
+        function handleSearch() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const clearButton = document.getElementById('clearSearch');
+            
+            if (searchTerm) {
+                clearButton.style.display = 'block';
+                filteredFiles = allAudioFiles.filter(file => 
+                    file.displayName.toLowerCase().includes(searchTerm) ||
+                    file.name.toLowerCase().includes(searchTerm)
+                );
+            } else {
+                clearButton.style.display = 'none';
+                filteredFiles = [...allAudioFiles];
+            }
+            
+            handleSort();
+        }
+
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('clearSearch').style.display = 'none';
+            filteredFiles = [...allAudioFiles];
+            handleSort();
+        }
+
         async function loadAudioFiles() {
             try {
                 const response = await fetch(GITHUB_API_URL);
@@ -729,15 +756,12 @@
                     downloadUrl: file.download_url,
                     rawUrl: RAW_BASE_URL + encodeURIComponent(file.name),
                     lastModified: new Date().toLocaleDateString(),
-                    created: new Date(file.sha).getTime() // Use sha as a pseudo-date
+                    created: new Date(file.sha).getTime()
                 }));
 
                 filteredFiles = [...allAudioFiles];
                 updateStats();
-                
-                // Load saved progress if persistence is enabled
                 loadSavedProgress();
-                
                 renderAudioGrid();
                 
                 document.getElementById('loadingState').style.display = 'none';
@@ -791,30 +815,7 @@
             document.getElementById('lastUpdated').textContent = 'Today';
         }
 
-        function handleSearch() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const clearButton = document.getElementById('clearSearch');
-            
-            if (searchTerm) {
-                clearButton.style.display = 'block';
-                filteredFiles = allAudioFiles.filter(file => 
-                    file.displayName.toLowerCase().includes(searchTerm) ||
-                    file.name.toLowerCase().includes(searchTerm)
-                );
-            } else {
-                clearButton.style.display = 'none';
-                filteredFiles = [...allAudioFiles];
-            }
-            
-            handleSort(); // Re-apply current sort to filtered results
-        }
-
-        function clearSearch() {
-            document.getElementById('searchInput').value = '';
-            document.getElementById('clearSearch').style.display = 'none';
-            filteredFiles = [...allAudioFiles];
-            handleSort();
-        }
+        function handleSort() {
             const sortBy = document.getElementById('sortSelect').value;
             
             filteredFiles.sort((a, b) => {
@@ -872,11 +873,6 @@
                     </div>
                     <div class="card-body">
                         <div class="audio-player-container">
-                            <audio class="audio-player" preload="metadata" data-file-id="${file.name}">
-                                <source src="${file.rawUrl}" type="audio/mpeg">
-                                Your browser does not support the audio element.
-                            </audio>
-                            
                             <div class="custom-controls">
                                 <button class="big-play-btn" data-file-id="${file.name}">
                                     ▶
@@ -925,24 +921,27 @@
         }
 
         function setupAudioControls() {
-            const audioPlayers = document.querySelectorAll('.audio-player');
             const playButtons = document.querySelectorAll('.big-play-btn');
             const progressBars = document.querySelectorAll('.progress-bar');
             const restartButtons = document.querySelectorAll('.restart-btn');
 
-            audioPlayers.forEach(audio => {
-                const fileId = audio.dataset.fileId;
-                const audioCard = audio.closest('.audio-card');
-                const playBtn = audioCard.querySelector('.big-play-btn');
+            playButtons.forEach(btn => {
+                const fileId = btn.dataset.fileId;
+                const audioCard = btn.closest('.audio-card');
                 const progressBar = audioCard.querySelector('.progress-bar');
                 const progressFill = progressBar.querySelector('.progress-fill');
                 const currentTimeEl = audioCard.querySelector('.current-time');
                 const totalTimeEl = audioCard.querySelector('.total-time');
 
+                let audio = new Audio();
+                let isPlaying = false;
+                let duration = 0;
+                let currentTime = 0;
+
                 // Store references for easy access
                 customPlayers[fileId] = {
                     audio: audio,
-                    playBtn: playBtn,
+                    playBtn: btn,
                     progressBar: progressBar,
                     progressFill: progressFill,
                     currentTimeEl: currentTimeEl,
@@ -950,62 +949,78 @@
                     audioCard: audioCard
                 };
 
+                // Set up audio source
+                audio.src = `${RAW_BASE_URL}${encodeURIComponent(fileId)}`;
+                audio.preload = 'metadata';
+
                 // Restore saved position if available
                 if (audioStates[fileId]) {
-                    audio.currentTime = audioStates[fileId].currentTime;
+                    currentTime = audioStates[fileId].currentTime;
                     if (currentlyPlaying === fileId) {
-                        audioCard.classList.add('paused');
+                        audioCard.classList.add('paused', 'selected');
                     }
                 }
 
                 // Load metadata
                 audio.addEventListener('loadedmetadata', () => {
-                    totalTimeEl.textContent = formatTime(audio.duration);
+                    duration = audio.duration;
+                    totalTimeEl.textContent = formatTime(duration);
                     if (audioStates[fileId]) {
                         audio.currentTime = audioStates[fileId].currentTime;
+                        currentTime = audio.currentTime;
                         updateProgress(fileId);
                     }
                 });
 
-                // Play/pause functionality
+                // Play button functionality
+                btn.addEventListener('click', () => {
+                    if (isPlaying) {
+                        audio.pause();
+                    } else {
+                        // Pause all other audio first
+                        Object.keys(customPlayers).forEach(otherFileId => {
+                            if (otherFileId !== fileId) {
+                                const otherPlayer = customPlayers[otherFileId];
+                                if (!otherPlayer.audio.paused) {
+                                    otherPlayer.audio.pause();
+                                }
+                            }
+                        });
+                        
+                        audio.play();
+                    }
+                });
+
+                // Play event
                 audio.addEventListener('play', () => {
+                    isPlaying = true;
                     listenedFiles.add(fileId);
                     
                     // Increment play counter (always persistent)
                     playCounters[fileId] = (playCounters[fileId] || 0) + 1;
                     updatePlayCounter(fileId);
-                    saveProgress(); // Always save play counts
-                    
-                    // Pause all other audio
-                    audioPlayers.forEach(otherAudio => {
-                        if (otherAudio !== audio && !otherAudio.paused) {
-                            const otherFileId = otherAudio.dataset.fileId;
-                            audioStates[otherFileId] = {
-                                currentTime: otherAudio.currentTime,
-                                duration: otherAudio.duration
-                            };
-                            otherAudio.pause();
-                        }
-                    });
+                    saveProgress();
 
                     // Update UI - remove selection from all cards first
                     document.querySelectorAll('.audio-card').forEach(card => {
                         card.classList.remove('playing', 'paused', 'selected');
                     });
-                    document.querySelectorAll('.big-play-btn').forEach(btn => {
-                        btn.textContent = '▶';
+                    document.querySelectorAll('.big-play-btn').forEach(button => {
+                        button.textContent = '▶';
                     });
 
                     // Add selection and playing state to current card
                     audioCard.classList.add('playing', 'selected');
-                    playBtn.textContent = '⏸';
+                    btn.textContent = '⏸';
                     currentlyPlaying = fileId;
                     
                     updateTrafficLight(audioCard, fileId);
                     saveProgress();
                 });
 
+                // Pause event
                 audio.addEventListener('pause', () => {
+                    isPlaying = false;
                     audioStates[fileId] = {
                         currentTime: audio.currentTime,
                         duration: audio.duration
@@ -1013,23 +1028,25 @@
                     
                     audioCard.classList.remove('playing');
                     audioCard.classList.add('paused', 'selected');
-                    playBtn.textContent = '▶';
+                    btn.textContent = '▶';
                     
                     updateTrafficLight(audioCard, fileId);
                     saveProgress();
                 });
 
+                // Time update
                 audio.addEventListener('timeupdate', () => {
+                    currentTime = audio.currentTime;
                     updateProgress(fileId);
                     
                     audioStates[fileId] = {
-                        currentTime: audio.currentTime,
-                        duration: audio.duration
+                        currentTime: currentTime,
+                        duration: duration
                     };
                     
                     // Check if audio is nearly finished
-                    const remaining = audio.duration - audio.currentTime;
-                    const percentComplete = (audio.currentTime / audio.duration) * 100;
+                    const remaining = duration - currentTime;
+                    const percentComplete = (currentTime / duration) * 100;
                     
                     if (remaining <= 5 || percentComplete >= 95) {
                         if (!completedFiles.has(fileId)) {
@@ -1040,28 +1057,16 @@
                     }
                 });
 
+                // Audio ended
                 audio.addEventListener('ended', () => {
+                    isPlaying = false;
                     completedFiles.add(fileId);
                     delete audioStates[fileId];
                     currentlyPlaying = null;
                     audioCard.classList.remove('playing', 'paused', 'selected');
-                    playBtn.textContent = '▶';
+                    btn.textContent = '▶';
                     updateTrafficLight(audioCard, fileId);
                     saveProgress();
-                });
-            });
-
-            // Big play button functionality
-            playButtons.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const fileId = btn.dataset.fileId;
-                    const player = customPlayers[fileId];
-                    
-                    if (player.audio.paused) {
-                        player.audio.play();
-                    } else {
-                        player.audio.pause();
-                    }
                 });
             });
 
@@ -1098,9 +1103,12 @@
                     });
                     
                     // Pause any currently playing audio
-                    document.querySelectorAll('.audio-player').forEach(otherAudio => {
-                        if (otherAudio !== player.audio && !otherAudio.paused) {
-                            otherAudio.pause();
+                    Object.keys(customPlayers).forEach(otherFileId => {
+                        if (otherFileId !== fileId) {
+                            const otherPlayer = customPlayers[otherFileId];
+                            if (!otherPlayer.audio.paused) {
+                                otherPlayer.audio.pause();
+                            }
                         }
                     });
                     
